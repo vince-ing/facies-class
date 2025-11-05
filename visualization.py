@@ -374,7 +374,6 @@ def plot_well_logs(all_data, facies_to_plot, colors):
     # Invert Y-axis and set limits
     axes[0].set_ylim(y_limits)
     
-    # --- NEW LEGEND ---
     # Add a single, clean legend to the last plot
     legend_elements = [plt.Line2D([0], [0], 
                                   color=colors[name], 
@@ -382,7 +381,6 @@ def plot_well_logs(all_data, facies_to_plot, colors):
                                   label=name) 
                        for name in facies_to_plot if name in facies_data]
     axes[5].legend(handles=legend_elements, loc='best')
-    # --- END NEW LEGEND ---
     
     fig.suptitle('Well 2 Log Data (Colored by Facies)', fontsize=18, y=1.0)
     fig.tight_layout(rect=[0, 0, 1, 0.96])
