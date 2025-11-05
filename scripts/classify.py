@@ -1,16 +1,12 @@
 #!/usr/bin/env python
 
 """
-step6_classify_facies.py
 
 Loads the real 2D seismic grids and the synthetic facies "training data"
 to perform a statistical classification.
 
 This script implements Step 6 of the rock physics workflow:
 "Step 6: Compute the Mahalanobis Distance for each real data point"
-
-Usage:
-    python step6_classify_facies.py
 
 Inputs:
     - intercept_gradient_data.pkl: (From Step 5) A dictionary containing the
@@ -69,7 +65,7 @@ GROUPED_MAP = {
     'FaciesIV':      3, 'FaciesV':       3
 }
 GROUPED_NAMES = ['Oil Sand', 'Brine Sand', 'Shale']
-GROUPED_COLORS = ['#202020', '#7a7a7a', '#dddddd'] # Red, Tan, Gray
+GROUPED_COLORS = ['#202020', '#7a7a7a', '#dddddd'] 
 
 
 # --- Functions ---

@@ -1,0 +1,61 @@
+C:.
+│   .gitignore
+│   config.py
+│   main.py
+│   Readme.txt
+│
+├───computed
+│       avo_data.pkl
+│       facies_statistics.pkl
+│       intercept_gradient_data.pkl
+│       mc_samples.pkl
+│
+├───data
+│   │   Mineral&FluidProperties.txt
+│   │   Well2.txt
+│   │
+│   ├───FaciesTxtFiles
+│   │       FaciesIIa.txt
+│   │       FaciesIIaOil.txt
+│   │       FaciesIIb.txt
+│   │       FaciesIIbOil.txt
+│   │       FaciesIIc.txt
+│   │       FaciesIIcOil.txt
+│   │       FaciesIII.txt
+│   │       FaciesIV.txt
+│   │       FaciesV.txt
+│   │
+│   └───Seismic
+│           SeismicGradient.txt
+│           SeismicInlineNumbers.txt
+│           SeismicIntercept.txt
+│           SeismicXlineNumers.txt
+│
+├───image output
+│       avo_reflectivity_curves.png
+│       facies_cdf_plots.png
+│       facies_pdf_plots.png
+│       grouped_facies_map.png
+│       intercept_gradient_combined.png
+│       intercept_gradient_subplots.png
+│       most_likely_facies_map.png
+│       seismic_data_plots.png
+│
+├───resources
+│       avopp.m
+│       CDF_Example.png
+│       Lab04.pdf
+│       Likely_Facies_Example.png
+│       Log_Example.png
+│       PDF_Example.png
+│
+├───scripts
+│       classify.py
+│       compute_ig.py
+│       load_data.py
+│       mc_draw.py
+│       statistics.py
+│       visualization.py
+│
+└───__pycache__
+        load_data.cpython-313.pyc
