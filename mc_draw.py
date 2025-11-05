@@ -271,9 +271,17 @@ def compute_avo_reflectivity(mc_samples, angle_range=30, approx=1):
             d1 = facies_iv['Density'][i]
             
             # Lower layer (current facies)
-            vp2 = facies_samples['Vp'][i]
-            vs2 = facies_samples['Vs'][i]
-            d2 = facies_samples['Density'][i]
+            # Special case: For FaciesIV, use a different realization to create variability
+            if facies_name == 'FaciesIV':
+                # Use the next realization (wrap around at the end)
+                j = (i + 1) % n_draws
+                vp2 = facies_samples['Vp'][j]
+                vs2 = facies_samples['Vs'][j]
+                d2 = facies_samples['Density'][j]
+            else:
+                vp2 = facies_samples['Vp'][i]
+                vs2 = facies_samples['Vs'][i]
+                d2 = facies_samples['Density'][i]
             
             # Calculate reflectivity
             rpp_curves[i, :] = avopp(vp1, vs1, d1, vp2, vs2, d2, angles, approx)
@@ -344,7 +352,7 @@ def plot_avo_curves(avo_data):
         # Plot all curves with transparency to show density
         for i in range(rpp_curves.shape[0]):
             ax.plot(angles, rpp_curves[i, :], 
-                   color=color, alpha=0.01, linewidth=0.5)
+                   color=color, alpha=0.90, linewidth=0.5)
         
         # Plot mean curve on top
         mean_curve = np.mean(rpp_curves, axis=0)
