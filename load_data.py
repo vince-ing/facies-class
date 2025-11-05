@@ -152,26 +152,29 @@ def load_data(base_dir='.'):
     
     return data
 
+
 # --- Main execution ---
 # When you run this, 'all_data' will hold all loaded data.
-all_data = load_data()
+if __name__ == "__main__":
+    
+    all_data = load_data()
 
-# Example of how you can access the data (will only work if loading was successful)
-try:
-    if all_data['facies']:
-        # Get the first available facies to show as an example
-        first_facies_name = list(all_data['facies'].keys())[0]
-        print(f"\nExample data access for '{first_facies_name}':")
-        print(f"  Vp (first 5 values): {all_data['facies'][first_facies_name].Vp[:5]}")
-        print(f"  Density (first 5 values): {all_data['facies'][first_facies_name].Density[:5]}")
-    else:
-        print("\nNo facies data was loaded, cannot show example.")
+    # Example of how you can access the data (will only work if loading was successful)
+    try:
+        if all_data['facies']:
+            # Get the first available facies to show as an example
+            first_facies_name = list(all_data['facies'].keys())[0]
+            print(f"\nExample data access for '{first_facies_name}':")
+            print(f"  Vp (first 5 values): {all_data['facies'][first_facies_name].Vp[:5]}")
+            print(f"  Density (first 5 values): {all_data['facies'][first_facies_name].Density[:5]}")
+        else:
+            print("\nNo facies data was loaded, cannot show example.")
 
-    if 'intercept' in all_data['seismic']:
-        print(f"\nExample data access for 'seismic':")
-        print(f"  Intercept (shape): {all_data['seismic']['intercept'].shape}")
-    else:
-        print("\nNo seismic data was loaded, cannot show example.")
+        if 'intercept' in all_data['seismic']:
+            print(f"\nExample data access for 'seismic':")
+            print(f"  Intercept (shape): {all_data['seismic']['intercept'].shape}")
+        else:
+            print("\nNo seismic data was loaded, cannot show example.")
 
-except Exception as e:
-    print(f"\nError showing data examples: {e}")
+    except Exception as e:
+        print(f"\nError showing data examples: {e}")
