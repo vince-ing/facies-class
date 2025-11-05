@@ -14,6 +14,24 @@ except ImportError:
     print("Please make sure 'load_data.py' is in the same directory as 'visualization.py'.")
     exit()
 
+FACIES_LIST = [
+    'FaciesIIa',
+    'FaciesIIb',
+    'FaciesIIc',
+    'FaciesIII',
+    'FaciesIV',
+    'FaciesV'
+]
+
+FACIES_COLORS = {
+    'FaciesIIa': 'brown',  # Brown
+    'FaciesIIb': 'orange',  # Orange
+    'FaciesIIc': 'm',  # Magenta
+    'FaciesIII': 'g',  # Green
+    'FaciesIV': 'c',   # Cyan
+    'FaciesV': 'b'     # Blue
+}
+
 def create_blocked_gray_cmap():
     """
     Translates the BlockedGray.m logic into a matplotlib colormap.
@@ -274,6 +292,108 @@ def plot_pdf_cdf(stats_data, facies_to_plot, colors):
     plt.close(fig_cdf)
     
 
+def plot_well_logs(all_data, facies_to_plot, colors):
+    """
+    Creates a multi-track well log plot similar to Page 5 of the lecture.
+    
+    Plots logs from Well2.txt and overlays facies data points.
+    
+    *** UPDATED: This version uses solid line markers instead of dots ***
+    
+    Args:
+        all_data (dict): The main data dictionary from load_data.py
+        facies_to_plot (list): List of facies names to plot.
+        colors (dict): Dictionary mapping facies names to colors.
+    """
+    print("Generating well log plot...")
+    
+    try:
+        well_data = all_data['well']
+        facies_data = all_data['facies']
+        depth = well_data['Depth']
+    except KeyError as e:
+        print(f"Error: Missing data key {e}. Cannot plot well logs.")
+        return
+
+    # Create 6 tracks, sharing the Y (depth) axis
+    fig, axes = plt.subplots(1, 6, figsize=(18, 12), sharey=True)
+    
+    # --- Define plot limits from lecture slide 5 ---
+    y_limits = [2300, 2080] # Inverted depth
+    plot_props = {
+        'GR': {'ax': axes[0], 'data': well_data['GR'], 'limits': [40, 120]},
+        'Porosity': {'ax': axes[1], 'data': well_data['Porosity'], 'limits': [0.2, 0.4]},
+        'Density': {'ax': axes[2], 'data': well_data['Density'], 'limits': [2, 2.5]},
+        'Vp': {'ax': axes[3], 'data': well_data['Vp'], 'limits': [2, 4]},
+        'Vs': {'ax': axes[4], 'data': well_data['Vs'], 'limits': [0.5, 2]},
+        'Vp/Vs': {'ax': axes[5], 'data': None, 'limits': [1.5, 3]} # Special case
+    }
+
+    # --- Plot each log track ---
+    for prop_name, p in plot_props.items():
+        ax = p['ax']
+        
+        if p['data'] is not None:
+            # Plot the continuous log from Well2.txt
+            ax.plot(p['data'], depth, 'k-', linewidth=0.5, zorder=1)
+        
+        # Plot the individual facies data points on top
+        for facies_name in facies_to_plot:
+            if facies_name in facies_data:
+                facies_obj = facies_data[facies_name]
+                facies_depth = facies_obj.Depth
+                
+                # Get the correct property for this track
+                if prop_name == 'Vp/Vs':
+                    facies_prop_data = facies_obj.VpVs
+                elif hasattr(facies_obj, prop_name):
+                    facies_prop_data = getattr(facies_obj, prop_name)
+                else:
+                    continue # Skip if this facies doesn't have the log
+                
+                # --- MODIFIED PLOT CALL ---
+                # Plot facies points as solid horizontal lines
+                ax.scatter(facies_prop_data, facies_depth, 
+                           color=colors.get(facies_name, 'gray'), 
+                           marker='_',  # Use a horizontal line marker
+                           s=100,       # Increase size to make it look solid
+                           zorder=2,    # Plot on top of the black line
+                           label=None)  # Legend will be handled manually
+                # --- END MODIFICATION ---
+
+        ax.set_title(prop_name, fontsize=14)
+        ax.set_xlabel(prop_name, fontsize=12)
+        ax.set_xlim(p['limits'])
+        ax.grid(True, linestyle='--', alpha=0.6)
+
+    # --- Final Plot Touches ---
+    
+    # Set Y-axis label only on the first plot
+    axes[0].set_ylabel('Depth (m)', fontsize=12)
+    
+    # Invert Y-axis and set limits
+    axes[0].set_ylim(y_limits)
+    
+    # --- NEW LEGEND ---
+    # Add a single, clean legend to the last plot
+    legend_elements = [plt.Line2D([0], [0], 
+                                  color=colors[name], 
+                                  lw=4, 
+                                  label=name) 
+                       for name in facies_to_plot if name in facies_data]
+    axes[5].legend(handles=legend_elements, loc='best')
+    # --- END NEW LEGEND ---
+    
+    fig.suptitle('Well 2 Log Data (Colored by Facies)', fontsize=18, y=1.0)
+    fig.tight_layout(rect=[0, 0, 1, 0.96])
+    
+    # Save the figure
+    output_filename = 'well_log_plot.png'
+    plt.savefig(output_filename, bbox_inches='tight', dpi=150)
+    print(f"\nSuccessfully saved plot to: {output_filename}")
+    plt.close(fig)
+
+
 # --- Main execution ---
 if __name__ == "__main__":
     
@@ -298,27 +418,19 @@ if __name__ == "__main__":
     all_stats = load_statistics(stats_file)
     
     if all_stats:
-        # 2. Define facies and colors
-        facies_list = [
-            'FaciesIIa', 
-            'FaciesIIb', 
-            'FaciesIIc', 
-            'FaciesIII', 
-            'FaciesIV', 
-            'FaciesV'
-        ]
-        
-        facies_colors = {
-            'FaciesIIa': 'brown',  # Brown
-            'FaciesIIb': 'orange',  # Orange
-            'FaciesIIc': 'm',  # Magenta
-            'FaciesIII': 'g',  # Green
-            'FaciesIV': 'c',   # Cyan
-            'FaciesV': 'b'     # Blue
-        }
-        
-        # 3. Call the plotting function
-        plot_pdf_cdf(all_stats, facies_list, facies_colors)
+        # 2. Call the PDF/CDF plotting function
+        #    It will use the FACIES_LIST and FACIES_COLORS defined at the top
+        plot_pdf_cdf(all_stats, FACIES_LIST, FACIES_COLORS)
     else:
         print("\nError: Statistics data not found. Skipping PDF/CDF plots.")
         print("\nPlease run 'statistics.py' first to generate the statistics file!")
+
+    # === WELL LOG PLOTTING ===
+    print("\n--- Generating Well Log Plot ---")
+    
+    if 'well' in all_data and all_data['well']:
+        # 1. Call the new well log plotting function
+        #    It will use the FACIES_LIST and FACIES_COLORS defined at the top
+        plot_well_logs(all_data, FACIES_LIST, FACIES_COLORS)
+    else:
+        print("\nError: Well2 data not found. Skipping well log plot.")
