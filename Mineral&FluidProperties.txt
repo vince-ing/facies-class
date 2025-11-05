@@ -1,0 +1,16 @@
+%Mineral properties (quartz and clay). Moduli in GPa and density in g/cc
+
+
+Kq = 36.8;
+Gq = 44;
+Kc = 15;
+Kc = 5;
+rq = 2.65;
+rc = 2.5;
+ 
+ 
+%Fluids (brine and oil) in GPa and g/cc
+Kb = 2.8;
+rb = 1.09;
+Ko = 1;
+ro = 0.78;
