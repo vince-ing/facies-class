@@ -1,436 +1,137 @@
-import os
-import matplotlib.pyplot as plt
-import numpy as np
-from matplotlib.colors import ListedColormap
-import pickle
-from scipy.stats import norm
+"""
+Core Responsibility: To generate and save all plots and maps for the analysis.
 
-# Import the data loading function from your other file
-# This assumes 'load_data.py' is in the same directory
-try:
-    from load_data import load_data
-except ImportError:
-    print("Error: Could not import 'load_data.py'.")
-    print("Please make sure 'load_data.py' is in the same directory as 'visualization.py'.")
-    exit()
+Conceptual Functions:
 
-FACIES_LIST = [
-    'FaciesIIa',
-    'FaciesIIb',
-    'FaciesIIc',
-    'FaciesIII',
-    'FaciesIV',
-    'FaciesV'
-]
+a) Log data plot with facies indicated
 
-FACIES_COLORS = {
-    'FaciesIIa': 'brown',  # Brown
-    'FaciesIIb': 'orange',  # Orange
-    'FaciesIIc': 'm',  # Magenta
-    'FaciesIII': 'g',  # Green
-    'FaciesIV': 'c',   # Cyan
-    'FaciesV': 'b'     # Blue
-}
+    Function: plot_well_log(well_data_df, output_path)
 
-def create_blocked_gray_cmap():
-    """
-    Translates the BlockedGray.m logic into a matplotlib colormap.
-    
-    We will save this function for the final facies plot.
-    
-    Returns:
-        matplotlib.colors.ListedColormap: The custom 'blocked_gray' colormap.
-    """
-    print("Creating 'blocked_gray' colormap...")
-    
-    # 1. Get the standard 'gray' colormap
-    base_cmap = plt.get_cmap('gray')
-    
-    # 2. Get the three specific colors, normalized from 0.0 to 1.0
-    #    (MATLAB 1/8, 1/2, 7/8)
-    color_dark = base_cmap(1/8)
-    color_mid = base_cmap(1/2)
-    color_light = base_cmap(7/8)
-    
-    # 3. Build the new 64-entry color list
-    #    (21 dark, 21 mid, 22 light)
-    new_colors = ([color_dark] * 21) + ([color_mid] * 21) + ([color_light] * 22)
-    
-    # 4. Create the new ListedColormap
-    blocked_gray_cmap = ListedColormap(new_colors, name='blocked_gray')
-    
-    return blocked_gray_cmap
+    Purpose: To plot the well log traces (Vp, Vs, etc.) alongside a block log of the facies.
 
-def plot_seismic_data(seismic_data, cmap):
-    """
-    Plots the seismic intercept and gradient data.
-    
-    Args:
-        seismic_data (dict): The dictionary containing seismic data 
-                             (e.g., all_data['seismic']).
-        cmap (str or matplotlib.colors.ListedColormap): The colormap to use.
-    """
-    print("Plotting seismic data...")
-    
-    # Get the data to plot
-    intercept_data = seismic_data['intercept']
-    gradient_data = seismic_data['gradient']
-    
-    # Get the axis vectors
-    xline_vec = seismic_data['xline']
-    inline_vec = seismic_data['inline']
-    
-    # Define the plot extent [x_min, x_max, y_min, y_max]
-    plot_extent = [
-        xline_vec.min(), xline_vec.max(),
-        inline_vec.min(), inline_vec.max()
-    ]
-    
-    # Create the figure and subplots
-    fig, axes = plt.subplots(1, 2, figsize=(14, 4))
-    
-    # --- Plot 1: Intercept ---
-    ax0 = axes[0]
-    im0 = ax0.imshow(
-        intercept_data, 
-        cmap=cmap, 
-        extent=plot_extent,
-        aspect='equal',
-        origin='lower'
-    )
-    fig.colorbar(im0, ax=ax0, label='Intercept Value', shrink=0.75)
-    ax0.set_title('Seismic Intercept', fontsize=16)
-    ax0.set_xlabel('X-Line', fontsize=12)
-    ax0.set_ylabel('In-Line', fontsize=12)
-    
-    # --- Plot 2: Gradient ---
-    ax1 = axes[1]
-    im1 = ax1.imshow(
-        gradient_data, 
-        cmap=cmap, 
-        extent=plot_extent,
-        aspect='equal',
-        origin='lower'
-    )
-    fig.colorbar(im1, ax=ax1, label='Gradient Value', shrink=0.75)
-    ax1.set_title('Seismic Gradient', fontsize=16)
-    ax1.set_xlabel('X-Line', fontsize=12)
-    ax1.set_ylabel('In-Line', fontsize=12) # This label will now appear
-    
-    # --- Final Touches ---
-    fig.suptitle('Seismic Intercept and Gradient Surfaces', fontsize=20, y=1.02)
-    
-    # Use the object-oriented method
-    fig.tight_layout(rect=[0, 0, 1, 0.98])
-    
-    # Save the figure
-    output_filename = 'image output/seismic_data_plots.png'
-    plt.savefig(output_filename, bbox_inches='tight')
-    print(f"\nSuccessfully saved plot to: {output_filename}")
-    
-    # Explicitly close the figure to free memory
-    plt.close(fig)
+    Input:
 
-def load_statistics(filename='computed/facies_statistics.pkl'):
-    """
-    Loads the pickled statistics file.
-    """
-    print(f"Loading statistics from: {filename}...")
-    try:
-        with open(filename, 'rb') as f:
-            stats_data = pickle.load(f)
-        print("  Statistics loaded successfully.")
-        
-        # DEBUG: Print what we actually loaded
-        print("\n=== DEBUG: Statistics Content ===")
-        print(f"Keys in stats_data: {stats_data.keys()}")
-        if 'plot_ranges' in stats_data:
-            print(f"\nPlot ranges available for: {stats_data['plot_ranges'].keys()}")
-            for prop, ranges in stats_data['plot_ranges'].items():
-                print(f"  {prop}: min={ranges['min']:.4f}, max={ranges['max']:.4f}")
-        
-        if 'facies_stats' in stats_data:
-            print(f"\nFacies available: {list(stats_data['facies_stats'].keys())}")
-            # Print sample stats for first facies
-            first_facies = list(stats_data['facies_stats'].keys())[0]
-            print(f"\nSample stats for {first_facies}:")
-            for prop in ['Ip', 'VpVs']:
-                if prop in stats_data['facies_stats'][first_facies]['univariate']:
-                    s = stats_data['facies_stats'][first_facies]['univariate'][prop]
-                    print(f"  {prop}: mean={s['mean']:.4f}, std={s['std']:.4f}")
-        print("=================================\n")
-        
-        return stats_data
-    except FileNotFoundError:
-        print(f"  Error: Statistics file '{filename}' not found.")
-        print("  Please run 'statistics.py' first.")
-        return None
-    except Exception as e:
-        print(f"  Error loading {filename}: {e}")
-        import traceback
-        traceback.print_exc()
-        return None
+        well_data_df: The DataFrame from load_data.load_well_data(). This must contain 'Depth', 'Facies', and the log columns ('Vp', 'Vs', 'Density', etc.).
 
-def plot_pdf_cdf(stats_data, facies_to_plot, colors):
-    """
-    Plots the PDF and CDF curves for selected facies and properties.
-    """
-    if not stats_data:
-        print("No statistics data provided. Cannot plot PDFs/CDFs.")
-        return
-    
-    # Validate that we have the required data
-    if 'plot_ranges' not in stats_data:
-        print("ERROR: 'plot_ranges' not found in statistics data!")
-        return
-    
-    if 'facies_stats' not in stats_data:
-        print("ERROR: 'facies_stats' not found in statistics data!")
-        return
-        
-    print("Generating PDF/CDF plots...")
+    Logic:
 
-    properties = {
-        'Ip': 'AI',
-        'VpVs': 'Vp/Vs'
-    }
+        Uses matplotlib.pyplot.subplots() to create a figure with multiple linked axes (e.g., 5 subplots: Vp, Vs, Density, Ip, Facies).
 
-    # Check if the properties exist in plot_ranges
-    for prop_key in properties.keys():
-        if prop_key not in stats_data['plot_ranges']:
-            print(f"ERROR: '{prop_key}' not found in plot_ranges!")
-            return
+        For each log trace (Vp, Vs, etc.), it plots trace vs. Depth.
 
-    # === 1. Create PDF PLOT ===
-    fig_pdf, axes_pdf = plt.subplots(2, 1, figsize=(10, 10), sharex=False)
-    
-    for ax, (prop_key, x_label) in zip(axes_pdf, properties.items()):
-        plot_range = stats_data['plot_ranges'][prop_key]
-        
-        print(f"  Plotting {prop_key}: range [{plot_range['min']:.4f}, {plot_range['max']:.4f}]")
-        
-        # Create x values with some padding
-        range_width = plot_range['max'] - plot_range['min']
-        x_min = plot_range['min'] - 0.1 * range_width
-        x_max = plot_range['max'] + 0.1 * range_width
-        x = np.linspace(x_min, x_max, 400)
-        
-        plot_count = 0
-        for facies_name in facies_to_plot:
-            if facies_name not in stats_data['facies_stats']:
-                print(f"  Warning: '{facies_name}' not found in stats. Skipping.")
-                continue
-            
-            if prop_key not in stats_data['facies_stats'][facies_name]['univariate']:
-                print(f"  Warning: '{prop_key}' not found for '{facies_name}'. Skipping.")
-                continue
-            
-            stats = stats_data['facies_stats'][facies_name]['univariate'][prop_key]
-            mean = stats['mean']
-            std = stats['std']
-            
-            print(f"    {facies_name}: mean={mean:.4f}, std={std:.4f}")
-            
-            y_pdf = norm.pdf(x, mean, std)
-            ax.plot(x, y_pdf, label=facies_name, color=colors[facies_name], linewidth=2)
-            plot_count += 1
-        
-        if plot_count == 0:
-            print(f"  WARNING: No data was plotted for {prop_key}!")
-        
-        ax.set_xlabel(x_label, fontsize=12)
-        ax.set_ylabel('Probability Density', fontsize=12)
-        ax.set_title(f'PDF for {prop_key}', fontsize=14)
-        ax.legend()
-        ax.grid(True, linestyle='--', alpha=0.6)
+        For the 'Facies' column, it creates a "block log" (e.g., using plt.pcolormesh) where the color of each block corresponds to the facies at that depth.
 
-    fig_pdf.suptitle('Probability Distribution Functions (PDFs)', fontsize=18, y=1.02)
-    fig_pdf.tight_layout(rect=[0, 0, 1, 0.98])
-    
-    pdf_filename = 'image output/facies_pdf_plots.png'
-    plt.savefig(pdf_filename, bbox_inches='tight', dpi=150)
-    print(f"  Saved PDF plot to: {pdf_filename}")
-    plt.close(fig_pdf)
+        Links all Y-axes (Depth) so they scroll together.
 
-    # === 2. Create CDF PLOT ===
-    fig_cdf, axes_cdf = plt.subplots(2, 1, figsize=(10, 10), sharex=False)
+        Saves the figure to output_path.
 
-    for ax, (prop_key, x_label) in zip(axes_cdf, properties.items()):
-        plot_range = stats_data['plot_ranges'][prop_key]
-        
-        range_width = plot_range['max'] - plot_range['min']
-        x_min = plot_range['min'] - 0.1 * range_width
-        x_max = plot_range['max'] + 0.1 * range_width
-        x = np.linspace(x_min, x_max, 400)
-        
-        for facies_name in facies_to_plot:
-            if facies_name not in stats_data['facies_stats']:
-                continue
-            
-            if prop_key not in stats_data['facies_stats'][facies_name]['univariate']:
-                continue
-            
-            stats = stats_data['facies_stats'][facies_name]['univariate'][prop_key]
-            mean = stats['mean']
-            std = stats['std']
-            
-            y_cdf = norm.cdf(x, mean, std)
-            ax.plot(x, y_cdf, label=facies_name, color=colors[facies_name], linewidth=2)
-        
-        ax.set_xlabel(x_label, fontsize=12)
-        ax.set_ylabel('Cumulative Probability', fontsize=12)
-        ax.set_title(f'CDF for {prop_key}', fontsize=14)
-        ax.legend()
-        ax.grid(True, linestyle='--', alpha=0.6)
+b) Plots of PDFs and CDFs for all classes
 
-    fig_cdf.suptitle('Cumulative Distribution Functions (CDFs)', fontsize=18, y=1.02)
-    fig_cdf.tight_layout(rect=[0, 0, 1, 0.98])
-    
-    cdf_filename = 'image output/facies_cdf_plots.png'
-    plt.savefig(cdf_filename, bbox_inches='tight', dpi=150)
-    print(f"  Saved CDF plot to: {cdf_filename}")
-    plt.close(fig_cdf)
-    
+    Function: plot_property_distributions(well_data_df, properties, facies_names, output_path_prefix)
 
-def plot_well_logs(all_data, facies_to_plot, colors):
-    """
-    Creates a multi-track well log plot similar to Page 5 of the lecture.
-    
-    Plots logs from Well2.txt and overlays facies data points.
-    
-    *** UPDATED: This version uses solid line markers instead of dots ***
-    
-    Args:
-        all_data (dict): The main data dictionary from load_data.py
-        facies_to_plot (list): List of facies names to plot.
-        colors (dict): Dictionary mapping facies names to colors.
-    """
-    print("Generating well log plot...")
-    
-    try:
-        well_data = all_data['well']
-        facies_data = all_data['facies']
-        depth = well_data['Depth']
-    except KeyError as e:
-        print(f"Error: Missing data key {e}. Cannot plot well logs.")
-        return
+    Purpose: To plot the PDF (Probability Density Function) and CDF (Cumulative Distribution Function) for various properties, separated by facies.
 
-    # Create 6 tracks, sharing the Y (depth) axis
-    fig, axes = plt.subplots(1, 6, figsize=(18, 12), sharey=True)
-    
-    # --- Define plot limits from lecture slide 5 ---
-    y_limits = [2300, 2080] # Inverted depth
-    plot_props = {
-        'GR': {'ax': axes[0], 'data': well_data['GR'], 'limits': [40, 120]},
-        'Porosity': {'ax': axes[1], 'data': well_data['Porosity'], 'limits': [0.2, 0.4]},
-        'Density': {'ax': axes[2], 'data': well_data['Density'], 'limits': [2, 2.5]},
-        'Vp': {'ax': axes[3], 'data': well_data['Vp'], 'limits': [2, 4]},
-        'Vs': {'ax': axes[4], 'data': well_data['Vs'], 'limits': [0.5, 2]},
-        'Vp/Vs': {'ax': axes[5], 'data': None, 'limits': [1.5, 3]} # Special case
-    }
+    Input:
 
-    # --- Plot each log track ---
-    for prop_name, p in plot_props.items():
-        ax = p['ax']
-        
-        if p['data'] is not None:
-            # Plot the continuous log from Well2.txt
-            ax.plot(p['data'], depth, 'k-', linewidth=0.5, zorder=1)
-        
-        # Plot the individual facies data points on top
-        for facies_name in facies_to_plot:
-            if facies_name in facies_data:
-                facies_obj = facies_data[facies_name]
-                facies_depth = facies_obj.Depth
-                
-                # Get the correct property for this track
-                if prop_name == 'Vp/Vs':
-                    facies_prop_data = facies_obj.VpVs
-                elif hasattr(facies_obj, prop_name):
-                    facies_prop_data = getattr(facies_obj, prop_name)
-                else:
-                    continue # Skip if this facies doesn't have the log
-                
-                # --- MODIFIED PLOT CALL ---
-                # Plot facies points as solid horizontal lines
-                ax.scatter(facies_prop_data, facies_depth, 
-                           color=colors.get(facies_name, 'gray'), 
-                           marker='_',  # Use a horizontal line marker
-                           s=100,       # Increase size to make it look solid
-                           zorder=2,    # Plot on top of the black line
-                           label=None)  # Legend will be handled manually
-                # --- END MODIFICATION ---
+        well_data_df: The well log DataFrame, which must contain the 'Facies' column.
 
-        ax.set_title(prop_name, fontsize=14)
-        ax.set_xlabel(prop_name, fontsize=12)
-        ax.set_xlim(p['limits'])
-        ax.grid(True, linestyle='--', alpha=0.6)
+        properties: A list of property names to plot (e.g., ['Vp', 'Vs', 'Density', 'Ip', 'VpVs']). main.py would be responsible for calculating 'Ip' and 'VpVs' and adding them to the DataFrame before calling this.
 
-    # --- Final Plot Touches ---
-    
-    # Set Y-axis label only on the first plot
-    axes[0].set_ylabel('Depth (m)', fontsize=12)
-    
-    # Invert Y-axis and set limits
-    axes[0].set_ylim(y_limits)
-    
-    # --- NEW LEGEND ---
-    # Add a single, clean legend to the last plot
-    legend_elements = [plt.Line2D([0], [0], 
-                                  color=colors[name], 
-                                  lw=4, 
-                                  label=name) 
-                       for name in facies_to_plot if name in facies_data]
-    axes[5].legend(handles=legend_elements, loc='best')
-    # --- END NEW LEGEND ---
-    
-    fig.suptitle('Well 2 Log Data (Colored by Facies)', fontsize=18, y=1.0)
-    fig.tight_layout(rect=[0, 0, 1, 0.96])
-    
-    # Save the figure
-    output_filename = 'image output/well_log_plot.png'
-    plt.savefig(output_filename, bbox_inches='tight', dpi=150)
-    print(f"\nSuccessfully saved plot to: {output_filename}")
-    plt.close(fig)
+        facies_names: The list of facies to plot.
 
+    Logic:
 
-# --- Main execution ---
-if __name__ == "__main__":
-    
-    # 1. Load data
-    print("Loading data via load_data.py...")
-    all_data = load_data()
-    
-    # 2. Plot seismic data
-    cmap_to_use = 'gray_r' 
-    if 'seismic' in all_data and 'intercept' in all_data['seismic']:
-        print(f"\nUsing colormap: '{cmap_to_use}'")
-        plot_seismic_data(all_data['seismic'], cmap_to_use)
-    else:
-        print("\nError: Seismic data not found. Cannot generate seismic plots.")
-        
-    
-    # === PDF/CDF PLOTTING ===
-    print("\n--- Generating PDF/CDF Plots ---")
-    
-    # 1. Load statistics
-    stats_file = 'computed/facies_statistics.pkl'
-    all_stats = load_statistics(stats_file)
-    
-    if all_stats:
-        # 2. Call the PDF/CDF plotting function
-        #    It will use the FACIES_LIST and FACIES_COLORS defined at the top
-        plot_pdf_cdf(all_stats, FACIES_LIST, FACIES_COLORS)
-    else:
-        print("\nError: Statistics data not found. Skipping PDF/CDF plots.")
-        print("\nPlease run 'statistics.py' first to generate the statistics file!")
+        Loops through each prop in the properties list:
 
-    # === WELL LOG PLOTTING ===
-    print("\n--- Generating Well Log Plot ---")
-    
-    if 'well' in all_data and all_data['well']:
-        # 1. Call the new well log plotting function
-        #    It will use the FACIES_LIST and FACIES_COLORS defined at the top
-        plot_well_logs(all_data, FACIES_LIST, FACIES_COLORS)
-    else:
-        print("\nError: Well2 data not found. Skipping well log plot.")
+            Creates a figure for the PDF, and another for the CDF.
+
+            Loops through each facies_name in facies_names:
+
+                Extracts the data for that facies: data = well_data_df[well_data_df['Facies'] == facies_name][prop]
+
+                PDF Plot: Uses seaborn.kdeplot(data, label=facies_name) to plot the smoothed probability density.
+
+                CDF Plot: Sorts the data and plots it as a cumulative line graph (x = np.sort(data), y = np.arange(1, len(x)+1) / len(x)).
+
+            Saves the PDF plot to f"{output_path_prefix}_{prop}_pdf.png" and the CDF plot to f"{output_path_prefix}_{prop}_cdf.png".
+
+c) Reflectivity curves as a function of angle
+
+    Function: plot_avo_curves(avo_data, output_path)
+
+    Purpose: To plot the calculated AVO reflectivity curves for all facies.
+
+    Input:
+
+        avo_data: The data structure from feature_engineering.load_avo_data(). This is likely a dictionary like {'FaciesIIa': {'angle': array, 'reflectivity': array}, ...}.
+
+    Logic:
+
+        Creates one plot.
+
+        Loops through each facies_name, data in avo_data.items().
+
+        Plots data['angle'] vs. data['reflectivity'] and gives it a label.
+
+        Adds a legend, title, and axis labels.
+
+        Saves to output_path.
+
+d) Intercept-Gradient cross plots
+
+    Function: plot_ig_crossplot(seismic_ig_data, mc_samples_data, facies_names, output_path)
+
+    Purpose: To visualize the 2D distributions of the simulated facies and the real seismic data.
+
+    Input:
+
+        seismic_ig_data: The (N, 2) array of real seismic data (from feature_engineering.load_ig_features()).
+
+        mc_samples_data: The {'samples': ..., 'labels': ...} dictionary (from simulation.load_mc_samples()).
+
+        facies_names: List of facies names for labeling.
+
+    Logic:
+
+        Uses seaborn.jointplot or seaborn.kdeplot for rich visualization.
+
+        Plots the seismic_ig_data as a 2D density plot (e.g., in grayscale) to show the "background" of real data.
+
+        Overlays on the same plot a 2D kdeplot for each facies from the mc_samples_data, using a different color for each.
+
+        Saves to output_path.
+
+e) Image of most-likely facies & f) Image of most-likely grouped facies
+
+    Function: plot_facies_map(map_data_1d, original_shape, tick_labels, cmap, output_path)
+
+    Purpose: A flexible function to plot any 2D facies map. We use one function for both (e) and (f).
+
+    Input:
+
+        map_data_1d: A 1D array of integer indices (e.g., [0, 1, 2, 0, ...] where 0='FaciesIIa', 1='FaciesIIaOil', etc.).
+
+        original_shape: The 2D shape of the original seismic map (e.g., (200, 300)).
+
+        tick_labels: A list of string labels for the colorbar (e.g., ['FaciesIIa', ...] OR ['Oil', 'Brine', 'Shale']).
+
+        cmap: The matplotlib colormap to use.
+
+    Logic:
+
+        Reshapes the 1D data into a 2D map: map_2d = map_data_1d.reshape(original_shape).
+
+        Uses plt.imshow(map_2d, cmap=cmap).
+
+        Creates a plt.colorbar() and sets its tick labels to tick_labels.
+
+        Turns off the axes (plt.axis('off')).
+
+        Saves to output_path.
+
+    How main.py would use this for (e) and (f):
+
+        For (e): plot_facies_map(results['most_likely_map'], shape, config.FACIES_NAMES, config.FACIES_CMAP, ...)
+
+        For (f): main.py would first compute the grouped data, get its unique labels and integer indices, and then call: plot_facies_map(grouped_indices, shape, grouped_labels, config.GROUPED_CMAP, ...)
+"""
