@@ -2,7 +2,7 @@ import numpy as np
 import pickle
 import matplotlib.pyplot as plt
 
-def load_statistics(filename='facies_statistics.pkl'):
+def load_statistics(filename='computed/facies_statistics.pkl'):
     """
     Loads the pickled statistics file.
     
@@ -374,13 +374,13 @@ def plot_avo_curves(avo_data):
                 fontsize=16, fontweight='bold', y=0.995)
     plt.tight_layout()
     
-    output_filename = 'avo_reflectivity_curves.png'
+    output_filename = 'image output/avo_reflectivity_curves.png'
     plt.savefig(output_filename, dpi=150, bbox_inches='tight')
     print(f"  Saved AVO plot to: {output_filename}")
     plt.close(fig)
 
 
-def save_mc_samples(mc_samples, filename='mc_samples.pkl'):
+def save_mc_samples(mc_samples, filename='computed/mc_samples.pkl'):
     """
     Saves the Monte Carlo samples to a pickle file.
     
@@ -393,7 +393,7 @@ def save_mc_samples(mc_samples, filename='mc_samples.pkl'):
     print(f"Successfully saved MC samples to: {filename}\n")
 
 
-def save_avo_data(avo_data, filename='avo_data.pkl'):
+def save_avo_data(avo_data, filename='computed/avo_data.pkl'):
     """
     Saves the AVO reflectivity data to a pickle file.
     
@@ -426,7 +426,7 @@ if __name__ == "__main__":
     print("="*60 + "\n")
     
     # 1. Load statistics
-    stats_file = 'facies_statistics.pkl'
+    stats_file = 'computed/facies_statistics.pkl'
     all_stats = load_statistics(stats_file)
     
     if not all_stats:
@@ -441,7 +441,7 @@ if __name__ == "__main__":
         exit()
     
     # 3. Save the MC samples
-    save_mc_samples(mc_samples, 'mc_samples.pkl')
+    save_mc_samples(mc_samples, 'computed/mc_samples.pkl')
     
     # 4. Compute AVO reflectivity curves
     avo_data = compute_avo_reflectivity(mc_samples, angle_range=ANGLE_RANGE, approx=APPROX)
@@ -451,7 +451,7 @@ if __name__ == "__main__":
         exit()
     
     # 5. Save AVO data
-    save_avo_data(avo_data, 'avo_data.pkl')
+    save_avo_data(avo_data, 'computed/avo_data.pkl')
     
     # 6. Create diagnostic plots
     plot_avo_curves(avo_data)

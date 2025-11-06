@@ -179,7 +179,7 @@ def save_statistics(stats_data, filename):
 if __name__ == "__main__":
     
     # 1. Define the output file name
-    output_filename = 'facies_statistics.pkl'
+    output_filename = 'computed/facies_statistics.pkl'
     
     print("=" * 60)
     print("Starting Statistics Calculation with Enhanced Debugging")

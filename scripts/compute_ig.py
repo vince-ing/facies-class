@@ -51,7 +51,7 @@ FACIES_COLORS = {
 
 # --- Main Functions ---
 
-def load_data(filename="avo_data.pkl"):
+def load_data(filename="computed/avo_data.pkl"):
     """
     Loads the AVO data (theta and reflectivity curves) from a pickle file.
     This version is compatible with the output of mc_draw.py.
@@ -142,7 +142,7 @@ def compute_gradient_intercept(avo_data):
     print("Computation complete.")
     return intercept_gradient_data
 
-def save_data(data, filename="intercept_gradient_data.pkl"):
+def save_data(data, filename="computed/intercept_gradient_data.pkl"):
     """
     Saves the computed Intercept/Gradient data to a pickle file.
     """
@@ -204,7 +204,7 @@ def plot_data(ig_data):
 
     plt.suptitle("Step 5: Intercept vs. Gradient Clouds (by Facies)", fontsize=18)
     plt.tight_layout(rect=[0, 0.03, 1, 0.96])
-    plot_filename_1 = 'intercept_gradient_subplots.png'
+    plot_filename_1 = 'image output/intercept_gradient_subplots.png'
     plt.savefig(plot_filename_1)
     print(f"Saved subplot plot to {plot_filename_1}")
     plt.close(fig)
@@ -239,7 +239,7 @@ def plot_data(ig_data):
     ax.grid(True, linestyle=':', alpha=0.7)
     # Note: No legend, to match the style of lecture page 28
     
-    plot_filename_2 = 'intercept_gradient_combined.png'
+    plot_filename_2 = 'image output/intercept_gradient_combined.png'
     plt.savefig(plot_filename_2)
     print(f"Saved combined plot to {plot_filename_2}")
     plt.close(fig)
@@ -248,7 +248,7 @@ def plot_data(ig_data):
 
 if __name__ == "__main__":
     # 1. Load data from Step 4 (mc_draw.py)
-    avo_data = load_data("avo_data.pkl")
+    avo_data = load_data("computed/avo_data.pkl")
     
     if avo_data:
         # 2. Compute Intercept and Gradient
@@ -256,7 +256,7 @@ if __name__ == "__main__":
         
         if intercept_gradient_data:
             # 3. Save data for Step 6
-            save_data(intercept_gradient_data, "intercept_gradient_data.pkl")
+            save_data(intercept_gradient_data, "computed/intercept_gradient_data.pkl")
             
             # 4. Create diagnostic plots
             plot_data(intercept_gradient_data)

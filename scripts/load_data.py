@@ -43,7 +43,7 @@ def load_data(base_dir='.'):
     ]
     
     # Get a list of all facies .txt files from the 'FaciesTxtFiles' subdirectory
-    facies_dir = os.path.join(base_dir, 'FaciesTxtFiles')
+    facies_dir = os.path.join(base_dir, 'data/FaciesTxtFiles')
     facies_files = glob.glob(os.path.join(facies_dir, '*.txt'))
     
     if not facies_files:
@@ -84,7 +84,7 @@ def load_data(base_dir='.'):
     # ======================================================================
     print("Loading seismic data...")
     data['seismic'] = {}
-    seismic_dir = os.path.join(base_dir, 'Seismic')
+    seismic_dir = os.path.join(base_dir, 'data/Seismic')
     
     # Define file paths
     seismic_files = {
@@ -109,7 +109,7 @@ def load_data(base_dir='.'):
     # ======================================================================
     print("Loading Well2.txt data...")
     data['well'] = {}
-    well_file_path = os.path.join(base_dir, 'Well2.txt')
+    well_file_path = os.path.join(base_dir, 'data/Well2.txt')
     
     # Define the 7 column names from the header you provided
     well_column_names = ['Depth', 'Vp', 'Vs', 'Density', 'GR', 'Porosity', 'Vclay']

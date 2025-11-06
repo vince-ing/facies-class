@@ -124,14 +124,14 @@ def plot_seismic_data(seismic_data, cmap):
     fig.tight_layout(rect=[0, 0, 1, 0.98])
     
     # Save the figure
-    output_filename = 'seismic_data_plots.png'
+    output_filename = 'image output/seismic_data_plots.png'
     plt.savefig(output_filename, bbox_inches='tight')
     print(f"\nSuccessfully saved plot to: {output_filename}")
     
     # Explicitly close the figure to free memory
     plt.close(fig)
 
-def load_statistics(filename='facies_statistics.pkl'):
+def load_statistics(filename='computed/facies_statistics.pkl'):
     """
     Loads the pickled statistics file.
     """
@@ -247,7 +247,7 @@ def plot_pdf_cdf(stats_data, facies_to_plot, colors):
     fig_pdf.suptitle('Probability Distribution Functions (PDFs)', fontsize=18, y=1.02)
     fig_pdf.tight_layout(rect=[0, 0, 1, 0.98])
     
-    pdf_filename = 'facies_pdf_plots.png'
+    pdf_filename = 'image output/facies_pdf_plots.png'
     plt.savefig(pdf_filename, bbox_inches='tight', dpi=150)
     print(f"  Saved PDF plot to: {pdf_filename}")
     plt.close(fig_pdf)
@@ -286,7 +286,7 @@ def plot_pdf_cdf(stats_data, facies_to_plot, colors):
     fig_cdf.suptitle('Cumulative Distribution Functions (CDFs)', fontsize=18, y=1.02)
     fig_cdf.tight_layout(rect=[0, 0, 1, 0.98])
     
-    cdf_filename = 'facies_cdf_plots.png'
+    cdf_filename = 'image output/facies_cdf_plots.png'
     plt.savefig(cdf_filename, bbox_inches='tight', dpi=150)
     print(f"  Saved CDF plot to: {cdf_filename}")
     plt.close(fig_cdf)
@@ -388,7 +388,7 @@ def plot_well_logs(all_data, facies_to_plot, colors):
     fig.tight_layout(rect=[0, 0, 1, 0.96])
     
     # Save the figure
-    output_filename = 'well_log_plot.png'
+    output_filename = 'image output/well_log_plot.png'
     plt.savefig(output_filename, bbox_inches='tight', dpi=150)
     print(f"\nSuccessfully saved plot to: {output_filename}")
     plt.close(fig)
@@ -414,7 +414,7 @@ if __name__ == "__main__":
     print("\n--- Generating PDF/CDF Plots ---")
     
     # 1. Load statistics
-    stats_file = 'facies_statistics.pkl'
+    stats_file = 'computed/facies_statistics.pkl'
     all_stats = load_statistics(stats_file)
     
     if all_stats:
