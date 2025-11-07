@@ -46,8 +46,7 @@ GROUPED_FACIES_MAP = {
 }
 
 GROUPED_FACIES_NAMES = ['Sand', 'Shaly Sand', 'Shale']
-GROUPED_FACIES_CMAP = ListedColormap(['#FFFF00', '#808080', '#008000']) # Yellow, Gray, Green
-
+GROUPED_FACIES_CMAP = ListedColormap(['#202020', '#7a7a7a', '#dddddd']) 
 
 # ==============================================================================
 #   a) Well Log Plot
@@ -408,8 +407,8 @@ def plot_facies_maps(classification_results, seismic_geometry, facies_names, out
         xlines = seismic_geometry['xline']
         
         # Define the map extent for imshow
-        # [x_min, x_max, y_max, y_min]
-        extent = [xlines.min(), xlines.max(), inlines.max(), inlines.min()]
+        # [x_min, x_max, y_min, y_max]
+        extent = [xlines.min(), xlines.max(), inlines.min(), inlines.max()]
         
         # Get the 1D array of classification indices
         most_likely_idx_1d = classification_results['most_likely_facies_idx']
@@ -422,25 +421,24 @@ def plot_facies_maps(classification_results, seismic_geometry, facies_names, out
         ax.set_title('Most Likely Facies')
         
         # Create a 9-color colormap
-        cmap_9 = plt.cm.get_cmap('jet', 9)
+        cmap_9 = plt.cm.get_cmap('gray', 9)
         
         # Plot the map
         cax = ax.imshow(facies_map_2d, 
                         cmap=cmap_9, 
-                        aspect='auto', # Use 'auto' with extent
+                        aspect='equal', # Use 'equal'
                         extent=extent,
+                        origin='lower', # Set origin to match example
                         vmin=-0.5, 
                         vmax=8.5)
-        
-        # Set "equal" aspect *after* plotting
-        ax.set_aspect('equal')
         
         # Add colorbar
         cbar = fig.colorbar(cax, ticks=np.arange(9))
         cbar.ax.set_yticklabels(facies_names)
         
         ax.set_xlabel('X-Line')
-        ax.set_ylabel('Inline')
+        # --- FIX: Matched Y-label from example ---
+        ax.set_ylabel('In-Line')
         
         plt.tight_layout()
         plt.savefig(output_most_likely)
@@ -468,19 +466,18 @@ def plot_facies_maps(classification_results, seismic_geometry, facies_names, out
         # Plot the grouped map
         cax = ax.imshow(grouped_facies_map_2d,
                         cmap=GROUPED_FACIES_CMAP,
-                        aspect='auto',
+                        aspect='equal', # Use 'equal'
                         extent=extent,
+                        origin='lower', # Set origin to match example
                         vmin=0.5, # Tick 1
                         vmax=3.5) # Tick 3
-        
-        ax.set_aspect('equal')
         
         # Add colorbar
         cbar = fig.colorbar(cax, ticks=[1, 2, 3])
         cbar.ax.set_yticklabels(GROUPED_FACIES_NAMES)
         
         ax.set_xlabel('X-Line')
-        ax.set_ylabel('Inline')
+        ax.set_ylabel('In-Line')
         
         plt.tight_layout()
         plt.savefig(output_grouped)

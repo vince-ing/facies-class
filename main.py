@@ -99,6 +99,32 @@ def load_or_compute(file_path, compute_func, **compute_kwargs):
             
     return data
 
+def clear_cache(computed_dir):
+    """
+    Deletes all .pkl files from the specified directory.
+    """
+    print(f"  Clearing cache from: {computed_dir}")
+    if not os.path.exists(computed_dir):
+        print(f"  Directory not found, nothing to clear.")
+        return
+    
+    try:
+        files_found = False
+        for filename in os.listdir(computed_dir):
+            if filename.endswith(".pkl"):
+                files_found = True
+                file_path = os.path.join(computed_dir, filename)
+                os.remove(file_path)
+                print(f"    Removed: {filename}")
+        
+        if not files_found:
+            print(f"  No .pkl files found to remove.")
+        else:
+            print(f"  Cache cleared successfully.")
+            
+    except Exception as e:
+        print(f"  Error clearing cache: {e}")
+
 # --- Main Pipeline ---
 
 def run_pipeline():
@@ -148,14 +174,19 @@ def run_pipeline():
     # STEP 3: RUN MONTE CARLO & AVO SIMULATION
     # ==========================================================================
     print("\n--- STEP 3: Loading/Running AVO Simulation ---")
+
+    # --- FIX: Update arguments to use dynamic top layer calculation ---
     pipeline_data['avo_data'] = load_or_compute(
         file_path=config.AVO_DATA_PATH,
         compute_func=run_avo_simulation,
+        # Arguments for compute_func:
         facies_stats=pipeline_data['rock_property_stats'],
         facies_names=config.FACIES_NAMES,
+        well_data=pipeline_data['raw_data']['well'], 
         n_samples=config.MC_SAMPLE_COUNT,
-        top_layer_props=config.TOP_LAYER_PROPERTIES,
-        theta_angles=config.AVO_THETA_ANGLES
+        theta_angles=config.AVO_THETA_ANGLES,
+        top_layer_depth_start=config.TOP_LAYER_DEPTH_START,
+        top_layer_depth_end=config.TOP_LAYER_DEPTH_END 
     )
     if pipeline_data['avo_data'] is None:
         print("  ERROR: AVO simulation returned None! Check Step 3.")
@@ -308,6 +339,16 @@ if __name__ == "__main__":
     # Ensure the computed and output directories exist
     os.makedirs(config.COMPUTED_DIR, exist_ok=True)
     os.makedirs(config.OUTPUT_DIR, exist_ok=True)
+
+    # Checks if cached data should be used or cleared 
+    if not config.USE_CACHED_DATA:
+        print(f"\n{'='*60}")
+        print("WARNING: USE_CACHED_DATA is set to False.")
+        print("Clearing all .pkl files from 'computed' directory...")
+        clear_cache(config.COMPUTED_DIR)
+        print(f"{'='*60}\n")
+    else:
+        print(f"\nINFO: USE_CACHED_DATA is set to True. Will use cached files.\n")
     
     # Normalize priors just in case they don't sum to 1
     try:

@@ -74,6 +74,11 @@ WELL_COLUMN_NAMES = [
 #   PIPELINE PARAMETERS
 # ==============================================================================
 
+# --- Cache Behavior ---
+# Set to False to clear all .pkl files from the 'computed' directory
+# before running the pipeline, forcing a full re-computation.
+USE_CACHED_DATA = False
+
 # --- Facies / Lithology ---
 # The names of the facies, in the order they will be processed.
 # This is crucial for ensuring statistics, simulations, and plots
@@ -100,16 +105,13 @@ ROCK_PROPERTY_UNIVARIATE_FEATURE = 'Density'
 # --- Step 3: AVO Simulation ---
 MC_SAMPLE_COUNT = 5000
 
+# Angle range for reflectivity calculation 
+AVO_THETA_ANGLES = np.arange(0, 30, 1)
+
 # Constant properties for the "Top Layer" (Layer 4)
 # Used in the avopp (Aki-Richards) simulation
-TOP_LAYER_PROPERTIES = {
-    'Vp': 3.1,      # km/s
-    'Vs': 1.48,     # km/s
-    'Density': 2.38 # g/cc
-}
-
-# Angle range for reflectivity calculation (0 to 49 degrees)
-AVO_THETA_ANGLES = np.arange(0, 30, 1)
+TOP_LAYER_DEPTH_START = 2143.2  # m
+TOP_LAYER_DEPTH_END = 2154.1    # m
 
 # --- Step 4 & 5: Classifier Features ---
 # The features that will be used for the final classification
