@@ -1,143 +1,323 @@
 """
-Main entry point for the Facies Classification pipeline.
+main.py - Main Pipeline Orchestrator
 
-This script orchestrates the entire workflow from loading data to
-classification and visualization.
+This is the single entry point for the entire facies classification pipeline.
+It controls the "story" of the analysis by:
+1.  Importing all settings from config.py.
+2.  Importing "worker" functions from the scripts/ folder.
+3.  Calling the worker functions in the correct order.
+4.  Handling the caching of computed results (e.g., loading .pkl files
+    if they exist, or running the computation if they don't).
+
+To run the entire analysis, execute this file from your terminal:
+    $ python main.py
 """
 
 import os
-import logging
-import config  # Imports all your paths and parameters
+import time
+import pickle
+import numpy as np
 
-# Import all the "worker" modules from the scripts package
-# Note: You'll need to add an empty scripts/__init__.py file
-from scripts import load_data
-from scripts import feature_engineering  # (formerly compute_ig.py)
-from scripts import statistics
-from scripts import simulation           # (formerly mc_draw.py)
-from scripts import classify
-from scripts import visualization
+# Import all configuration settings from config.py
+import config
 
-# --- Setup Logging (Good Practice) ---
-# (This is optional but highly recommended for a refactor)
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
+# --- Import Worker Functions ---
 
+# Step 1
+from scripts.load_data import load_raw_data
 
-def setup_directories():
+# Step 2 & 5
+from scripts.statistics import (
+    compute_rock_property_statistics,
+    compute_classifier_statistics,
+    save_statistics, 
+    load_statistics
+)
+
+# Step 3
+from scripts.simulation import (
+    run_avo_simulation, 
+    save_avo_data, 
+    load_avo_data
+)
+
+# Step 4
+from scripts.feature_engineering import (
+    compute_intercept_gradient,
+    format_seismic_features,
+    save_computed_data,
+    load_computed_data
+)
+
+# Step 6
+from scripts.classify import bayesian_classification
+
+# Step 7
+from scripts import visualization as viz
+
+# --- Helper Function for Caching ---
+
+def load_or_compute(file_path, compute_func, **compute_kwargs):
     """
-    Ensures all output directories from the config file exist.
+    A generic helper to handle the caching logic.
+    Tries to load a .pkl file. If it fails (missing or corrupt),
+    it runs the provided compute_func, saves the result, and returns it.
+    
+    Args:
+        file_path (str): The path to the .pkl file to load/save.
+        compute_func (function): The function to run if loading fails.
+        **compute_kwargs: Keyword arguments to pass to compute_func.
+        
+    Returns:
+        The loaded or computed data.
     """
-    logger.info("Setting up output directories...")
-    # Use os.makedirs with exist_ok=True to safely create directories
-    # without errors if they already exist.
-    os.makedirs(config.COMPUTED_DIR, exist_ok=True)
-    os.makedirs(config.IMAGE_OUTPUT_DIR, exist_ok=True)
-    logger.info("Directories are ready.")
+    try:
+        # 1. Try to load
+        if not os.path.exists(file_path):
+            raise FileNotFoundError(f"  Cached file not found: {file_path}")
+            
+        print(f"  Attempting to load cached data from: {file_path}")
+        with open(file_path, 'rb') as f:
+            data = pickle.load(f)
+        print(f"  Successfully loaded cached data.")
+        
+    except (FileNotFoundError, pickle.PickleError, EOFError) as e:
+        # 2. If it fails, compute and save
+        print(f"  {e}")
+        print(f"  Running computation step...")
+        
+        # Run the computation function
+        data = compute_func(**compute_kwargs)
+        
+        # Save the result
+        try:
+            with open(file_path, 'wb') as f:
+                pickle.dump(data, f)
+            print(f"  Successfully computed and saved data to: {file_path}")
+        except Exception as save_e:
+            print(f"  Error saving computed data to {file_path}: {save_e}")
+            
+    return data
 
+# --- Main Pipeline ---
 
 def run_pipeline():
     """
-    Orchestrates the full data processing and classification pipeline.
+    Executes the entire data processing and classification pipeline
+    from start to finish.
     """
+    start_time = time.time()
+    print(f"Starting pipeline...")
+    print(f"Loading configuration from config.py")
     
-    logger.info("Starting Facies Classification Pipeline...")
+    # This dictionary will hold all the data as we process it
+    pipeline_data = {}
 
-    # --- 1. SETUP ---
-    setup_directories()
-
-    # --- 2. LOAD DATA ---
-    # Load all raw data from disk using functions from load_data.py
-    logger.info("Loading raw data...")
-    well_data = load_data.load_well_data(config.WELL_2_PATH)
-    facies_data_map = load_data.load_all_facies(config.FACIES_DIR_PATH)
-    seismic_data = load_data.load_seismic_data(
-        intercept_path=config.SEISMIC_INTERCEPT_PATH,
-        gradient_path=config.SEISMIC_GRADIENT_PATH
-        # ... other seismic paths ...
+    # ==========================================================================
+    # STEP 1: LOAD RAW DATA
+    # ==========================================================================
+    print("\n--- STEP 1: Loading Raw Data ---")
+    pipeline_data['raw_data'] = load_raw_data(
+        facies_dir=config.FACIES_DIR,
+        facies_column_names=config.FACIES_COLUMN_NAMES,
+        seismic_paths=config.SEISMIC_FILE_PATHS,
+        well_path=config.WELL_FILE_PATH,
+        well_column_names=config.WELL_COLUMN_NAMES
     )
-    logger.info("Raw data loaded successfully.")
+    print("--- STEP 1: Complete ---")
 
-    # --- 3. FEATURE ENGINEERING (Compute IG, AVO, etc.) ---
-    # Process raw data into features needed for classification
-    logger.info("Computing AVO and Intercept/Gradient data...")
+    # ==========================================================================
+    # STEP 2: COMPUTE OR LOAD ROCK PROPERTY STATISTICS
+    # ==========================================================================
+    print("\n--- STEP 2: Loading/Computing Rock Property Statistics ---")
     
-    # This function would do the work and save the .pkl files
-    feature_engineering.compute_and_save_avo(
-        well_data,
-        output_path=config.AVO_DATA_PATH
+    # *** FIX: Passing the new, correct arguments ***
+    pipeline_data['rock_property_stats'] = load_or_compute(
+        file_path=config.ROCK_PROPERTY_STATS_PATH,
+        compute_func=compute_rock_property_statistics,
+        facies_data_map=pipeline_data['raw_data']['facies'],
+        facies_names=config.FACIES_NAMES,
+        bivariate_features=config.ROCK_PROPERTY_BIVARIATE_FEATURES,
+        univariate_feature=config.ROCK_PROPERTY_UNIVARIATE_FEATURE
+    )
+    # *** END FIX ***
+    
+    print("--- STEP 2: Complete ---")
+
+    # ==========================================================================
+    # STEP 3: RUN MONTE CARLO & AVO SIMULATION
+    # ==========================================================================
+    print("\n--- STEP 3: Loading/Running AVO Simulation ---")
+    pipeline_data['avo_data'] = load_or_compute(
+        file_path=config.AVO_DATA_PATH,
+        compute_func=run_avo_simulation,
+        facies_stats=pipeline_data['rock_property_stats'],
+        facies_names=config.FACIES_NAMES,
+        n_samples=config.MC_SAMPLE_COUNT,
+        top_layer_props=config.TOP_LAYER_PROPERTIES,
+        theta_angles=config.AVO_THETA_ANGLES
+    )
+    if pipeline_data['avo_data'] is None:
+        print("  ERROR: AVO simulation returned None! Check Step 3.")
+        exit(1)
+    elif not isinstance(pipeline_data['avo_data'], dict):
+        print(f"  ERROR: AVO data is not a dict! Type: {type(pipeline_data['avo_data'])}")
+        exit(1)
+    else:
+        print(f"  AVO data contains {len(pipeline_data['avo_data'])} facies:")
+        for facies_name, facies_avo in pipeline_data['avo_data'].items():
+            print(f"    {facies_name}: {facies_avo.keys()}")
+            if 'Rpp' in facies_avo:
+                print(f"      Rpp shape: {facies_avo['Rpp'].shape}")
+
+    print("--- STEP 3: Complete ---")
+
+    # ==========================================================================
+    # STEP 4: FEATURE ENGINEERING
+    # ==========================================================================
+    print("\n--- STEP 4a: Computing/Loading Synthetic [I, G] Pairs ---")
+    
+    # *** FIX: Using correct config variable IG_DATA_PATH ***
+    pipeline_data['intercept_gradient_data'] = load_or_compute(
+        file_path=config.IG_DATA_PATH,
+        compute_func=compute_intercept_gradient,
+        avo_data_map=pipeline_data['avo_data']
+    )
+
+    if pipeline_data['intercept_gradient_data'] is None:
+        print("  ERROR: compute_intercept_gradient returned None!")
+        print("  This means the AVO data structure is not correct.")
+        exit(1)
+    elif not isinstance(pipeline_data['intercept_gradient_data'], dict):
+        print(f"  ERROR: I/G data is not a dict! Type: {type(pipeline_data['intercept_gradient_data'])}")
+        exit(1)
+    else:
+        print(f"  I/G data contains {len(pipeline_data['intercept_gradient_data'])} facies:")
+        for facies_name, facies_ig in pipeline_data['intercept_gradient_data'].items():
+            print(f"    {facies_name}: {facies_ig.keys()}")
+            if 'intercept' in facies_ig:
+                print(f"      intercept length: {len(facies_ig['intercept'])}")
+            if 'gradient' in facies_ig:
+                print(f"      gradient length: {len(facies_ig['gradient'])}")
+    # *** END FIX ***
+    
+    print("--- STEP 4a: Complete ---")
+    
+    print("\n--- STEP 4b: Computing/Loading Real Seismic Features ---")
+    pipeline_data['seismic_features'] = load_or_compute(
+        file_path=config.SEISMIC_FEATURES_PATH,
+        compute_func=format_seismic_features,
+        seismic_data_map=pipeline_data['raw_data']['seismic']
+    )
+    print("--- STEP 4b: Complete ---")
+
+    # ==========================================================================
+    # STEP 5: COMPUTE CLASSIFIER STATISTICS
+    # ==========================================================================
+    print("\n--- STEP 5: Loading/Computing Classifier Statistics ---")
+    pipeline_data['classifier_stats'] = load_or_compute(
+        file_path=config.CLASSIFIER_STATS_PATH,
+        compute_func=compute_classifier_statistics,
+        ig_data_map=pipeline_data['intercept_gradient_data'],
+        facies_names=config.FACIES_NAMES,
+        classifier_features=config.CLASSIFIER_FEATURES
+    )
+    print("--- STEP 5: Complete ---")
+
+    # ==========================================================================
+    # STEP 6: CLASSIFY SEISMIC DATA
+    # ==========================================================================
+    print("\n--- STEP 6: Loading/Running Bayesian Classification ---")
+    
+    # *** FIX: Using correct config variable FACIES_PRIORS ***
+    pipeline_data['classification_results'] = load_or_compute(
+        file_path=config.CLASSIFICATION_RESULTS_PATH,
+        compute_func=bayesian_classification,
+        seismic_features=pipeline_data['seismic_features'],
+        classifier_stats=pipeline_data['classifier_stats'],
+        facies_names=config.FACIES_NAMES,
+        priors=config.FACIES_PRIORS
+    )
+    # *** END FIX ***
+    
+    print("--- STEP 6: Complete ---")
+
+    # ==========================================================================
+    # STEP 7: GENERATE PLOTS
+    # ==========================================================================
+    print("\n--- STEP 7: Generating All Plots ---")
+    
+    # *** FIX: Using correct config plot paths ***
+    
+    # a) Well Log Plot
+    viz.plot_well_logs(
+        well_data=pipeline_data['raw_data']['well'],
+        output_path=config.WELL_LOG_PLOT_PATH
     )
     
-    intercept_gradient_data = feature_engineering.compute_and_save_ig(
-        seismic_data,
-        output_path=config.IG_DATA_PATH
-    )
-    logger.info("Feature computation complete.")
-
-
-    # --- 4. COMPUTE STATISTICS ---
-    # Calculate statistical models (PDFs/CDFs) for each facies
-    logger.info("Computing facies statistics...")
-    facies_stats = statistics.compute_facies_statistics(facies_data_map)
-    
-    # Save the computed stats to a .pkl file
-    statistics.save_statistics(facies_stats, config.FACIES_STATS_PATH)
-    logger.info("Facies statistics saved.")
-
-
-    # --- 5. RUN SIMULATION (Monte Carlo) ---
-    # Generate samples based on the computed statistics
-    logger.info("Running Monte Carlo simulation...")
-    mc_samples = simulation.run_monte_carlo(
-        facies_stats,
-        n_samples=config.MC_SAMPLE_COUNT
+    # b) PDF/CDF Plots
+    viz.plot_property_distributions(
+        facies_data_map=pipeline_data['raw_data']['facies'],
+        facies_names=config.FACIES_NAMES,
+        output_pdf_path=config.PDF_PLOT_PATH,
+        output_cdf_path=config.CDF_PLOT_PATH
     )
     
-    # Save the samples to a .pkl file
-    simulation.save_mc_samples(mc_samples, config.MC_SAMPLES_PATH)
-    logger.info(f"Monte Carlo simulation complete with {config.MC_SAMPLE_COUNT} samples.")
-
-
-    # --- 6. CLASSIFICATION ---
-    # Run the Bayesian classification
-    logger.info("Classifying seismic data...")
-    classification_results = classify.run_classification(
-        seismic_ig_data=intercept_gradient_data,
-        mc_samples=mc_samples,
-        facies_names=config.FACIES_NAMES
-    )
-    # classification_results might be a dictionary, e.g.:
-    # { "most_likely_map": array, "probability_maps": dict }
-    logger.info("Classification complete.")
-
-
-    # --- 7. VISUALIZATION ---
-    # Generate and save all plots and maps
-    logger.info("Generating visualizations...")
-    
-    visualization.plot_well_log(
-        well_data,
-        output_path=os.path.join(config.IMAGE_OUTPUT_DIR, "well_log_plot.png")
+    # c) AVO Reflectivity Curves
+    viz.plot_reflectivity_curves(
+        avo_data=pipeline_data['avo_data'],
+        facies_names=config.FACIES_NAMES,
+        output_path=config.AVO_CURVES_PLOT_PATH
     )
     
-    visualization.plot_facies_pdfs(
-        facies_stats,
-        output_path=os.path.join(config.IMAGE_OUTPUT_DIR, "facies_pdf_plots.png")
+    # d) Intercept-Gradient Crossplots
+    viz.plot_intercept_gradient(
+        ig_data=pipeline_data['intercept_gradient_data'],
+        seismic_features=pipeline_data['seismic_features'],
+        facies_names=config.FACIES_NAMES,
+        output_subplots=config.IG_SUBPLOTS_PATH,
+        output_combined=config.IG_COMBINED_PLOT_PATH
     )
     
-    visualization.plot_most_likely_map(
-        classification_results["most_likely_map"],
-        output_path=os.path.join(config.IMAGE_OUTPUT_DIR, "most_likely_facies_map.png")
+    # e) & f) Facies Classification Maps
+    viz.plot_facies_maps(
+        classification_results=pipeline_data['classification_results'],
+        seismic_geometry=pipeline_data['raw_data']['seismic'],
+        facies_names=config.FACIES_NAMES,
+        output_most_likely=config.MOST_LIKELY_FACIES_MAP_PATH,
+        output_grouped=config.GROUPED_FACIES_MAP_PATH
     )
     
-    # ... add other plotting functions ...
+    # *** END FIX ***
     
-    logger.info("Visualizations saved to image output folder.")
-    logger.info("--- PIPELINE FINISHED SUCCESSFULLY ---")
+    print("--- STEP 7: Complete ---")
+
+    # --- Pipeline Complete ---
+    end_time = time.time()
+    print(f"\n========================================================")
+    print(f"  Pipeline finished in {end_time - start_time:.2f} seconds.")
+    print(f"  All outputs are in '{config.COMPUTED_DIR}'")
+    print(f"  All plots are in '{config.OUTPUT_DIR}'")
+    print(f"========================================================")
 
 
-# --- Standard Python entry point ---
 if __name__ == "__main__":
-    # This block ensures the code only runs when you execute
-    # "python main.py" from your terminal.
+    # This block ensures the pipeline runs only when the script is
+    # executed directly.
+    
+    # Ensure the computed and output directories exist
+    os.makedirs(config.COMPUTED_DIR, exist_ok=True)
+    os.makedirs(config.OUTPUT_DIR, exist_ok=True)
+    
+    # Normalize priors just in case they don't sum to 1
+    try:
+        total_prior = sum(config.FACIES_PRIORS.values())
+        if not np.isclose(total_prior, 1.0):
+            print(f"Warning: Priors sum to {total_prior:.2f}. Normalizing...")
+            for name in config.FACIES_PRIORS:
+                config.FACIES_PRIORS[name] /= total_prior
+    except Exception as e:
+        print(f"Error normalizing priors: {e}")
+
+    
     run_pipeline()
