@@ -15,38 +15,25 @@ matplotlib.use('Agg')  # Use non-interactive backend for scripts
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap, LogNorm
 from scipy.stats import norm
-
+from config import *
 # ==============================================================================
 #   Module-Level Styling Constants
 # ==============================================================================
 
-# Facies colors from the original project for consistency
-FACIES_COLORS = {
-    'FaciesIIa': '#8B0000',     # dark red
-    'FaciesIIaOil': '#FF0000',  # red
-    'FaciesIIb': '#FFA500',     # orange
-    'FaciesIIbOil': '#FFD700',  # gold
-    'FaciesIIc': '#FF00FF',     # magenta
-    'FaciesIIcOil': '#EE82EE',  # violet
-    'FaciesIII': '#008000',    # green
-    'FaciesIV': '#00FFFF',     # cyan
-    'FaciesV': '#0000FF',      # blue
-}
-
 # Grouped facies definitions (Visualization-only logic)
 GROUPED_FACIES_MAP = {
-    'FaciesIIa': 1,     # Sand
+    'FaciesIIa': 2,     # Sand
     'FaciesIIaOil': 1,  # Sand
-    'FaciesIIb': 1,     # Sand
+    'FaciesIIb': 2,     # Sand
     'FaciesIIbOil': 1,  # Sand
-    'FaciesIIc': 1,     # Sand
+    'FaciesIIc': 2,     # Sand
     'FaciesIIcOil': 1,  # Sand
-    'FaciesIII': 2,     # Shaly Sand
+    'FaciesIII': 3,     # Shaly Sand
     'FaciesIV': 3,      # Shale
     'FaciesV': 3,       # Shale
 }
 
-GROUPED_FACIES_NAMES = ['Sand', 'Shaly Sand', 'Shale']
+GROUPED_FACIES_NAMES = ['Oil Sand', 'Brine Sand', 'Shale']
 GROUPED_FACIES_CMAP = ListedColormap(['#202020', '#7a7a7a', '#dddddd']) 
 
 # ==============================================================================

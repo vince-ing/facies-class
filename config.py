@@ -84,15 +84,9 @@ USE_CACHED_DATA = False
 # This is crucial for ensuring statistics, simulations, and plots
 # all use the same order and labels.
 FACIES_NAMES = [
-    'FaciesIIa',
-    'FaciesIIaOil',
-    'FaciesIIb',
-    'FaciesIIbOil',
-    'FaciesIIc',
-    'FaciesIIcOil',
-    'FaciesIII',
-    'FaciesIV',
-    'FaciesV'
+    'FaciesIIaOil', 'FaciesIIbOil', 'FaciesIIcOil',
+    'FaciesIIa',     'FaciesIIb',     'FaciesIIc',
+    'FaciesIII',     'FaciesIV',      'FaciesV'
 ]
 
 # --- Step 2: Rock Property Statistics ---
@@ -123,7 +117,7 @@ CLASSIFIER_FEATURES = ['intercept', 'gradient']
 # --- Classification Method ---
 # Select the algorithm to use for classification.
 # Options: 'bayesian', 'mahalanobis'
-CLASSIFICATION_METHOD = 'bayesian'
+CLASSIFICATION_METHOD = 'mahalanobis'
 
 # --- Classification Results Path (Dynamic) ---
 # This path is now built dynamically based on the method chosen above.
