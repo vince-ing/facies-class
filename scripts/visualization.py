@@ -179,9 +179,9 @@ def plot_well_logs(well_data: dict, facies_data_dict: dict, facies_colors: dict,
     
     fig.legend(by_label.values(), by_label.keys(), 
                loc='center left', 
-               bbox_to_anchor=(1.0, 0.5),
+               bbox_to_anchor=(0.9, 0.8),
                title="Legend",
-               fontsize='medium')
+               fontsize='large')
     
     plt.tight_layout(rect=[0, 0, 0.9, 1]) 
     
