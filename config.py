@@ -148,3 +148,15 @@ FACIES_PRIORS = {
     'FaciesV': 0.11  # Note: This is 0.11 * 9 = 0.99. The script will normalize.
 }
 
+FACIES_COLORS = {
+    'FaciesIIa': '#8B0000',     # dark red
+    'FaciesIIaOil': '#FF0000',  # red
+    'FaciesIIb': '#FFA500',     # orange
+    'FaciesIIbOil': '#FFD700',  # gold
+    'FaciesIIc': '#FF00FF',     # magenta
+    'FaciesIIcOil': '#EE82EE',  # violet
+    'FaciesIII': '#008000',    # green
+    'FaciesIV': '#00FFFF',     # cyan
+    'FaciesV': '#0000FF',      # blue
+}
+

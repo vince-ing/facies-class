@@ -279,11 +279,11 @@ def run_pipeline():
     # ==========================================================================
     print("\n--- STEP 7: Generating All Plots ---")
     
-    # *** FIX: Using correct config plot paths ***
-    
     # a) Well Log Plot
     viz.plot_well_logs(
         well_data=pipeline_data['raw_data']['well'],
+        facies_data_dict=pipeline_data['raw_data']['facies'],  
+        facies_colors=config.FACIES_COLORS,                  
         output_path=config.WELL_LOG_PLOT_PATH
     )
     

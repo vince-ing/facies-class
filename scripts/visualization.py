@@ -9,6 +9,7 @@ other than saving the final plot images.
 """
 
 import numpy as np
+import pandas as pd
 import matplotlib
 matplotlib.use('Agg')  # Use non-interactive backend for scripts
 import matplotlib.pyplot as plt
@@ -52,56 +53,146 @@ GROUPED_FACIES_CMAP = ListedColormap(['#202020', '#7a7a7a', '#dddddd'])
 #   a) Well Log Plot
 # ==============================================================================
 
-def plot_well_logs(well_data, output_path):
+def plot_well_logs(well_data: dict, facies_data_dict: dict, facies_colors: dict, output_path: str):
     """
-    Plots the Well2.txt log data (Vp, Vs, Density, GR, Porosity).
+    Plots the main well log and overlays the individual facies logs on 7 separate tracks.
+    Calculates 'Ip' and 'Vp/Vs' for the main well log.
+    Calculates 'Vp/Vs' for the facies logs.
+
+    Args:
+        well_data (dict): Dictionary of well log numpy arrays (e.g., 'Depth', 'Vp').
+        facies_data_dict (dict): Dictionary mapping facies names (str) to their
+                                 CUSTOM FACIES OBJECTS.
+        facies_colors (dict): Dictionary mapping facies names (str) to
+                              matplotlib color strings.
+        output_path (str): Path to save the resulting plot image.
     """
-    print(f"Generating well log plot: {output_path}")
     
-    try:
-        logs_to_plot = ['Vp', 'Vs', 'Density', 'GR', 'Porosity']
-        log_colors = ['blue', 'red', 'green', 'black', 'purple']
-        log_units = ['(km/s)', '(km/s)', '(g/cc)', '(API)', '(v/v)']
+    print("\n--- DEBUG: Inside plot_well_logs (Corrected Logic) ---")
+
+    # Define the tracks and labels based on user prompt and data columns
+    log_tracks = ['GR', 'Porosity', 'Density', 'Vp', 'Vs', 'Ip', 'Vp/Vs']
+    x_labels = [
+        'API', 
+        '%',
+        'g/cm^3', 
+        'km/s', 
+        'km/s', 
+        'km/s * g/cm^3', 
+        ' '
+    ]
+
+    num_tracks = len(log_tracks)
+    fig, axes = plt.subplots(nrows=1, ncols=num_tracks, figsize=(num_tracks * 2.5, 12), sharey=True)
+    
+    if num_tracks == 1:
+        axes = [axes] 
+
+    fig.suptitle('Well Logs and Facies Properties', fontsize=18, y=1.03)
+
+    for i, (track_name, x_label) in enumerate(zip(log_tracks, x_labels)):
+        ax = axes[i]
         
-        depth = well_data['Depth']
-        
-        fig, axes = plt.subplots(1, len(logs_to_plot), figsize=(12, 10), sharey=True)
-        fig.suptitle('Well 2 Log Data', fontsize=16)
-        
-        for i, (log_name, color, unit) in enumerate(zip(logs_to_plot, log_colors, log_units)):
-            ax = axes[i]
-            if log_name in well_data:
-                log_data = well_data[log_name]
-                ax.plot(log_data, depth, color=color, lw=1)
-                ax.set_title(f"{log_name}\n{unit}")
-                ax.set_xlabel(None) # Clear x-label
-                ax.grid(True, linestyle=':', alpha=0.6)
-                
-                # --- FIX: Corrected method to move ticks to top ---
-                # Position x-axis ticks and labels at the top
-                ax.xaxis.set_ticks_position('top')
-                ax.xaxis.set_label_position('top') 
-                ax.tick_params(axis='x', labelsize=8)
-                # --- End Fix ---
-                
+        # --- 1. Plot Well Log (Well2.txt) ---
+        label_well = 'Well Log (Well2.txt)' if i == 0 else None
+        try:
+            depth_data_well = well_data['Depth']
+            log_data_well = None
+
+            if track_name == 'Ip':
+                # --- CALCULATION for Well Log ---
+                log_data_well = well_data['Vp'] * well_data['Density']
+                if i == 0: print(f"  DEBUG (Well): Calculating 'Ip'")
+            elif track_name == 'Vp/Vs':
+                # --- CALCULATION for Well Log ---
+                vp_data = well_data['Vp']
+                vs_data = np.where(well_data['Vs'] == 0, np.nan, well_data['Vs']) # Avoid division by zero
+                log_data_well = vp_data / vs_data
+                if i == 0: print(f"  DEBUG (Well): Calculating 'Vp/Vs'")
             else:
-                ax.set_title(f"{log_name}\n(Not Found)")
-                # --- FIX: Also apply tick fix to empty plots ---
-                ax.xaxis.set_ticks_position('top')
-                ax.xaxis.set_label_position('top')
-                # --- End Fix ---
+                # --- STANDARD PLOT for Well Log ---
+                log_data_well = well_data[track_name]
+            
+            # Plot if data was found/calculated
+            if log_data_well is not None:
+                ax.plot(log_data_well, depth_data_well, 
+                        color='black', 
+                        linewidth=1, 
+                        label=label_well)
 
+        except (KeyError, AttributeError, TypeError) as e:
+            if i == 0: # Only print debug message once
+                print(f"  DEBUG (Well): Skipping plot for '{track_name}'. Missing data: {e}")
+        
+        # --- 2. Plot Facies Logs (FaciesTxtFiles) ---
+        for facies_name, facies_obj in facies_data_dict.items():
+            color = facies_colors.get(facies_name, 'gray')
+            label_facies = facies_name if i == 0 else None
+            
+            try:
+                depth_data_facies = getattr(facies_obj, 'Depth')
+                log_data_facies = None
 
-        # Set Y-axis (Depth)
-        axes[0].set_ylabel('Depth (m)')
-        axes[0].invert_yaxis()
-        
-        plt.tight_layout(rect=[0, 0.03, 1, 0.95])
-        plt.savefig(output_path)
-        plt.close(fig)
-        
+                if track_name == 'Vp/Vs':
+                    # --- CALCULATION for Facies ---
+                    vp_data = getattr(facies_obj, 'Vp')
+                    vs_data = getattr(facies_obj, 'Vs')
+                    vs_data_safe = np.where(vs_data == 0, np.nan, vs_data) # Avoid division by zero
+                    log_data_facies = vp_data / vs_data_safe
+                else:
+                    # --- STANDARD PLOT for Facies (includes GR, Por, Den, Vp, Vs, AND Ip) ---
+                    if hasattr(facies_obj, track_name):
+                        log_data_facies = getattr(facies_obj, track_name)
+                        if i == 0 and track_name == 'Ip': 
+                            print(f"  DEBUG ({facies_name}): Plotting 'Ip' directly from attribute.")
+                
+                # Plot if data was found/calculated
+                if log_data_facies is not None and depth_data_facies is not None:
+                    ax.plot(log_data_facies, depth_data_facies, 
+                            color=color, 
+                            linewidth=2,
+                            label=label_facies)
+            
+            except (AttributeError, TypeError) as e:
+                if i == 0: # Only print debug message once per facies
+                    print(f"  DEBUG ({facies_name}): Skipping plot for '{track_name}'. Missing data: {e}")
+
+        # 3. Format the track (axis)
+        ax.set_xlabel(x_label)
+        ax.set_title(track_name, fontsize=12)
+        ax.grid(True, which='both', linestyle='--', linewidth=0.5)
+        ax.xaxis.set_ticks_position('top')
+        ax.xaxis.set_label_position('top')
+
+    # 4. Format the Y-axis (Depth)
+    axes[0].set_ylabel('Depth (m)', fontsize=12)
+    axes[0].invert_yaxis()
+    
+    if 'Depth' in well_data:
+        min_depth = well_data['Depth'].min()
+        max_depth = well_data['Depth'].max()
+        axes[0].set_ylim(max_depth, min_depth)
+
+    # 5. Create a single, de-duplicated legend
+    handles, labels = axes[0].get_legend_handles_labels()
+    by_label = dict(zip(labels, handles))
+    
+    fig.legend(by_label.values(), by_label.keys(), 
+               loc='center left', 
+               bbox_to_anchor=(1.0, 0.5),
+               title="Legend",
+               fontsize='medium')
+    
+    plt.tight_layout(rect=[0, 0, 0.9, 1]) 
+    
+    # 6. Save the figure
+    print(f"--- END DEBUG: Saving well log plot to {output_path}... ---")
+    try:
+        plt.savefig(output_path, bbox_inches='tight', dpi=300)
+        print(f"Successfully saved plot to {output_path}")
     except Exception as e:
-        print(f"  Error plotting well logs: {e}")
+        print(f"Error saving plot: {e}")
+    plt.close(fig)
 
 # ==============================================================================
 #   b) PDF and CDF Plots
