@@ -3,12 +3,16 @@ C:.
 │   config.py
 │   main.py
 │   Readme.txt
+│   requirements.txt
+│   tree.txt
 │
 ├───computed
 │       avo_data.pkl
-│       facies_statistics.pkl
+│       classification_results_bayesian.pkl
+│       classifier_statistics.pkl
 │       intercept_gradient_data.pkl
-│       mc_samples.pkl
+│       rock_property_statistics.pkl
+│       seismic_features.pkl
 │
 ├───data
 │   │   Mineral&FluidProperties.txt
@@ -39,7 +43,7 @@ C:.
 │       intercept_gradient_combined.png
 │       intercept_gradient_subplots.png
 │       most_likely_facies_map.png
-│       seismic_data_plots.png
+│       well_log_plot.png
 │
 ├───resources
 │       avopp.m
@@ -50,12 +54,11 @@ C:.
 │       PDF_Example.png
 │
 ├───scripts
-│       classify.py
-│       compute_ig.py
-│       load_data.py
-│       mc_draw.py
-│       statistics.py
-│       visualization.py
-│
-└───__pycache__
-        load_data.cpython-313.pyc
+    │   classify.py
+    │   feature_engineering.py
+    │   load_data.py
+    │   simulation.py
+    │   statistics.py
+    │   visualization.py
+    │   __init__.py
+    │
