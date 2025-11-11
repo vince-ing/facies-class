@@ -121,7 +121,13 @@ def _get_text_for_frame(param_name, value):
     if param_name == 'MC_SAMPLE_COUNT':
         return f"MC Sample Count: {value}"
     elif param_name == 'AVO_THETA_ANGLES':
-        if hasattr(value, 'max'):
+        # --- FIX for zero-size array ---
+        if value.size == 0:
+            return "Max Angle: N/A (empty array)"
+        # --- END FIX ---
+        elif hasattr(value, 'max'):
+            # The max value in np.arange(0, 30, 1) is 29.
+            # This text will correctly show "Max Angle: 29 degrees"
             return f"Max Angle: {value.max()} degrees"
         else:
             return f"Max Angle: {value} degrees" # Fallback
@@ -206,11 +212,16 @@ def create_animation(param_to_animate, values, frame_duration_ms=500):
         print(f"\n========================================================")
         print(f"  Generating Frame {i+1} / {len(values)}")
         
+        # --- FIX for zero-size array ---
         # Special handling for AVO_THETA_ANGLES to show max angle
-        if param_to_animate == 'AVO_THETA_ANGLES' and hasattr(value, 'max'):
-            print(f"  Setting {param_to_animate} = 0 to {value.max()} degrees")
+        if param_to_animate == 'AVO_THETA_ANGLES':
+            if value.size == 0:
+                print(f"  Setting {param_to_animate} = [empty array] (Max Angle: N/A)")
+            else:
+                print(f"  Setting {param_to_animate} = 0 to {value.max()} degrees")
         else:
             print(f"  Setting {param_to_animate} = {value}")
+        # --- END FIX ---
             
         print(f"========================================================")
         
@@ -229,6 +240,8 @@ def create_animation(param_to_animate, values, frame_duration_ms=500):
         try:
             # --- STEP 3: AVO SIMULATION ---
             print("\n--- Running Step 3: AVO Simulation ---")
+            # Note: This step might fail if value.size == 0.
+            # If it does, we will catch the error and skip the frame.
             pipeline_data['avo_data'] = load_or_compute(
                 file_path=config.AVO_DATA_PATH,
                 compute_func=run_avo_simulation,
@@ -377,13 +390,13 @@ if __name__ == "__main__":
     
     # 1. Choose ONE parameter to animate:
     # 'MC_SAMPLE_COUNT', 'AVO_THETA_ANGLES', 'CLASSIFICATION_METHOD'
-    PARAM_TO_ANIMATE = 'MC_SAMPLE_COUNT'
+    PARAM_TO_ANIMATE = 'AVO_THETA_ANGLES'
     
     # 2. Define the range for the chosen parameter:
     # These values are used if param is 'MC_SAMPLE_COUNT' or 'AVO_THETA_ANGLES'
-    ANIMATION_MIN = 5
-    ANIMATION_MAX = 5000
-    ANIMATION_STEP = 20 # Use a large step, this process is slow!
+    ANIMATION_MIN = 0
+    ANIMATION_MAX = 90
+    ANIMATION_STEP = 4 # Use a large step, this process is slow!
     
     # 3. Define the duration of each frame in milliseconds
     FRAME_DURATION_MS = 500 
