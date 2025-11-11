@@ -50,7 +50,7 @@ from scripts.feature_engineering import (
 )
 
 # Step 6
-from scripts.classify import bayesian_classification
+from scripts.classify import run_classification
 
 # Step 7
 from scripts import visualization as viz
@@ -258,18 +258,19 @@ def run_pipeline():
     # ==========================================================================
     # STEP 6: CLASSIFY SEISMIC DATA
     # ==========================================================================
-    print("\n--- STEP 6: Loading/Running Bayesian Classification ---")
     
-    # *** FIX: Using correct config variable FACIES_PRIORS ***
+    print(f"\n--- STEP 6: Loading/Running Classification ({config.CLASSIFICATION_METHOD}) ---")
+    
     pipeline_data['classification_results'] = load_or_compute(
         file_path=config.CLASSIFICATION_RESULTS_PATH,
-        compute_func=bayesian_classification,
+        compute_func=run_classification,
+        # --- Arguments for run_classification ---
+        method=config.CLASSIFICATION_METHOD,
         seismic_features=pipeline_data['seismic_features'],
         classifier_stats=pipeline_data['classifier_stats'],
         facies_names=config.FACIES_NAMES,
         priors=config.FACIES_PRIORS
     )
-    # *** END FIX ***
     
     print("--- STEP 6: Complete ---")
 

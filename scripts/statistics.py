@@ -150,8 +150,9 @@ def compute_rock_property_statistics(facies_data_map, facies_names, bivariate_fe
 
 def compute_classifier_statistics(ig_data_map, facies_names, classifier_features):
     """
-    Calculates the final statistical model (mean and covariance) for the
-    classifier features ([Intercept, Gradient]) based on the simulated data.
+    Calculates the final statistical model (mean, covariance, and inverse 
+    covariance) for the classifier features ([Intercept, Gradient]) based 
+    on the simulated data.
 
     Args:
         ig_data_map (dict): The dictionary of synthetic [I, G] pairs from
@@ -162,8 +163,8 @@ def compute_classifier_statistics(ig_data_map, facies_names, classifier_features
 
     Returns:
         dict: A dictionary where keys are facies names and values are another
-              dictionary containing the 'mean' vector and 'cov' (covariance)
-              matrix for that facies.
+              dictionary containing the 'mean' vector, 'cov' (covariance)
+              matrix, and 'inv_cov' (inverse covariance) matrix for that facies.
     """
     
     # Validate input
@@ -187,6 +188,8 @@ def compute_classifier_statistics(ig_data_map, facies_names, classifier_features
     print("Calculating final classifier statistics from synthetic data...")
     print(f"  Features being used: {', '.join(classifier_features)}")
     print(f"  Processing {len(ig_data_map)} facies from I/G data")
+    
+    nan_matrix = np.full((len(classifier_features), len(classifier_features)), np.nan)
 
     for facies_name in facies_names:
         if facies_name not in ig_data_map:
@@ -214,7 +217,8 @@ def compute_classifier_statistics(ig_data_map, facies_names, classifier_features
             print(f"  Warning: Not enough valid I/G data for '{facies_name}' (n={clean_data_stack.shape[0]}). Cannot compute covariance.")
             stats_map[facies_name] = {
                 'mean': np.full(len(classifier_features), np.nan),
-                'cov': np.full((len(classifier_features), len(classifier_features)), np.nan)
+                'cov': nan_matrix,
+                'inv_cov': nan_matrix
             }
             continue
 
@@ -224,9 +228,16 @@ def compute_classifier_statistics(ig_data_map, facies_names, classifier_features
         # Calculate the covariance matrix
         cov_matrix = np.cov(clean_data_stack, rowvar=False)
         
+        try:
+            inv_cov_matrix = np.linalg.inv(cov_matrix)
+        except np.linalg.LinAlgError:
+            print(f"  Error: Covariance matrix for {facies_name} is singular. Cannot invert.")
+            inv_cov_matrix = nan_matrix
+            
         stats_map[facies_name] = {
             'mean': mean_vector,
-            'cov': cov_matrix
+            'cov': cov_matrix,
+            'inv_cov': inv_cov_matrix  # Store the new matrix
         }
         
         print(f"  Computed classifier stats for: {facies_name} (n={clean_data_stack.shape[0]})")

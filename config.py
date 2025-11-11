@@ -42,7 +42,7 @@ AVO_DATA_PATH = os.path.join(COMPUTED_DIR, 'avo_data.pkl')
 IG_DATA_PATH = os.path.join(COMPUTED_DIR, 'intercept_gradient_data.pkl')
 SEISMIC_FEATURES_PATH = os.path.join(COMPUTED_DIR, 'seismic_features.pkl')
 CLASSIFIER_STATS_PATH = os.path.join(COMPUTED_DIR, 'classifier_statistics.pkl')
-CLASSIFICATION_RESULTS_PATH = os.path.join(COMPUTED_DIR, 'classification_results.pkl')
+CLASSIFIER_STATS_PATH = os.path.join(COMPUTED_DIR, 'classifier_statistics.pkl')
 
 # --- Output Plot File Paths ---
 WELL_LOG_PLOT_PATH = os.path.join(OUTPUT_DIR, 'well_log_plot.png')
@@ -119,6 +119,22 @@ TOP_LAYER_DEPTH_END = 2154.1    # m
 CLASSIFIER_FEATURES = ['intercept', 'gradient']
 
 # --- Step 6: Bayesian Classification ---
+
+# --- Classification Method ---
+# Select the algorithm to use for classification.
+# Options: 'bayesian', 'mahalanobis'
+CLASSIFICATION_METHOD = 'bayesian'
+
+# --- Classification Results Path (Dynamic) ---
+# This path is now built dynamically based on the method chosen above.
+# e.g., 'classification_results_bayesian.pkl'
+# or 'classification_results_mahalanobis.pkl'
+CLASSIFICATION_RESULTS_PATH = os.path.join(
+    COMPUTED_DIR, 
+    f'classification_results_{CLASSIFICATION_METHOD.lower()}.pkl'
+)
+
+
 # Prior probabilities for each facies (must sum to 1.0)
 FACIES_PRIORS = {
     'FaciesIIa': 0.11,
@@ -131,3 +147,4 @@ FACIES_PRIORS = {
     'FaciesIV': 0.11,
     'FaciesV': 0.11  # Note: This is 0.11 * 9 = 0.99. The script will normalize.
 }
+
