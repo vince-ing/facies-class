@@ -97,7 +97,7 @@ ROCK_PROPERTY_BIVARIATE_FEATURES = ['Vp', 'Vs']
 ROCK_PROPERTY_UNIVARIATE_FEATURE = 'Density'
 
 # --- Step 3: AVO Simulation ---
-MC_SAMPLE_COUNT = 2000
+MC_SAMPLE_COUNT = 5000
 
 # Angle range for reflectivity calculation 
 AVO_THETA_ANGLES = np.arange(0, 30, 1)

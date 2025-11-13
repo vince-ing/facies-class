@@ -61,14 +61,16 @@ def compute_rock_property_statistics(facies_data_map, facies_names, bivariate_fe
             vp_data = getattr(facies_obj, bivariate_features[0])
             vs_data = getattr(facies_obj, bivariate_features[1])
             
-            # Clean Vp and Vs independently first
-            vp_clean = vp_data[np.isfinite(vp_data)]
-            vs_clean = vs_data[np.isfinite(vs_data)]
+            # --- FIX START: Jointly clean data to preserve correlation ---
+            # We only keep rows where BOTH Vp and Vs are valid.
+            # This prevents aligning Vp at depth X with Vs at depth Y.
+            mask = np.isfinite(vp_data) & np.isfinite(vs_data)
             
-            # Make sure they have the same length (matching original logic)
-            min_len = min(len(vp_clean), len(vs_clean))
-            vp_clean = vp_clean[:min_len]
-            vs_clean = vs_clean[:min_len]
+            vp_clean = vp_data[mask]
+            vs_clean = vs_data[mask]
+            
+            min_len = len(vp_clean)
+            # --- FIX END ---
             
             if min_len > 0:
                 # Create a 2xN array (matching original)

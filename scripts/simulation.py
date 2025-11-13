@@ -4,71 +4,18 @@ scripts/simulation.py
 This module runs the full Monte Carlo and AVO simulation.
 It replaces the old mc_draw.py.
 
-CORRECTED VERSION: Now matches the original two-step workflow:
-1. Monte Carlo sampling (draw samples for all facies)
-2. AVO computation (use those samples to compute reflectivity)
+CORRECTED VERSION: Matches 'mc_draw.py' logic exactly.
+- Uses Facies IV samples as the variable top layer (instead of constant mean).
+- Preserves the "Facies IV over Facies IV" offset logic.
 """
 
 import numpy as np
 import pickle
 
-def _calculate_top_layer_stats(well_data, depth_start, depth_end):
-    """
-    Calculates the mean Vp, Vs, and Density from the well log
-    over a specified depth interval.
-    """
-    print(f"  Calculating top layer stats from well log ({depth_start}m - {depth_end}m)...")
-    
-    try:
-        depth_log = well_data['Depth']
-        
-        # Find indices within the depth range
-        mask = (depth_log >= depth_start) & (depth_log <= depth_end)
-        
-        if not np.any(mask):
-            raise ValueError(f"No well log data found in range {depth_start}-{depth_end}m.")
-        
-        # Calculate mean for each property, ensuring to handle NaNs
-        mean_vp = np.nanmean(well_data['Vp'][mask])
-        mean_vs = np.nanmean(well_data['Vs'][mask])
-        mean_density = np.nanmean(well_data['Density'][mask])
-        
-        if np.isnan(mean_vp) or np.isnan(mean_vs) or np.isnan(mean_density):
-            raise ValueError("NaN values encountered during top layer mean calculation.")
-
-        print(f"    Top Layer Vp (mean): {mean_vp:.4f} km/s")
-        print(f"    Top Layer Vs (mean): {mean_vs:.4f} km/s")
-        print(f"    Top Layer Density (mean): {mean_density:.4f} g/cc")
-        
-        return {'Vp': mean_vp, 'Vs': mean_vs, 'Density': mean_density}
-        
-    except (KeyError, TypeError) as e:
-        print(f"  ERROR: 'well_data' dictionary is missing required keys ('Depth', 'Vp', 'Vs', 'Density'). {e}")
-        return None
-    except Exception as e:
-        print(f"  ERROR calculating top layer stats: {e}")
-        print("  Cannot proceed with AVO simulation.")
-        return None
-
 def avopp(vp1, vs1, d1, vp2, vs2, d2, ang, approx=1):
     """
     Calculates P-to-P reflectivity (Rpp) as a function of angle of incidence.
-    
-    This is the EXACT function from the original mc_draw.py.
-    
-    Args:
-        vp1, vs1, d1: P-wave velocity, S-wave velocity, density of layer 1 (top)
-        vp2, vs2, d2: P-wave velocity, S-wave velocity, density of layer 2 (bottom)
-        ang: array of angles in DEGREES
-        approx: 1=Full Zoeppritz (default)
-                2=Aki & Richards
-                3=Shuey
-                4=Shuey linear (Castagna)
-                5=Wiggins 1983
-                6=Gidlow et al. 1992
-    
-    Returns:
-        Rpp: array of P-wave reflectivities at each angle
+    Matches the original mc_draw.py / avopp.m exactly.
     """
     
     # Convert angles to radians
@@ -160,22 +107,7 @@ def avopp(vp1, vs1, d1, vp2, vs2, d2, ang, approx=1):
 def monte_carlo_draw(facies_stats, facies_names, n_draws):
     """
     Draws Monte Carlo samples from the facies distributions.
-    This matches the original monte_carlo_draw() function.
-    
-    For each facies:
-    - Draws Vp and Vs from a BIVARIATE normal distribution (correlated)
-    - Draws Density from a UNIVARIATE normal distribution (independent)
-    
-    Args:
-        facies_stats (dict): The statistics dictionary from statistics.py
-        facies_names (list): List of facies names to process
-        n_draws (int): Number of Monte Carlo realizations per facies
-        
-    Returns:
-        dict: Dictionary containing MC samples for each facies
-              Format: {facies_name: {'Vp': array, 'Vs': array, 'Density': array}}
     """
-    
     print(f"Drawing {n_draws} Monte Carlo samples for each facies...")
     print("="*60)
     
@@ -186,7 +118,7 @@ def monte_carlo_draw(facies_stats, facies_names, n_draws):
             print(f"  Warning: {facies_name} not in stats. Skipping.")
             continue
         
-        print(f"\nProcessing: {facies_name}")
+        # print(f"\nProcessing: {facies_name}")
         
         try:
             # Get the bivariate statistics for Vp and Vs
@@ -211,14 +143,11 @@ def monte_carlo_draw(facies_stats, facies_names, n_draws):
         
         # --- Draw Vp and Vs from BIVARIATE normal distribution ---
         try:
-            # np.random.multivariate_normal returns shape (n_draws, 2)
-            # Column 0 is Vp, Column 1 is Vs
             vp_vs_samples = np.random.multivariate_normal(
                 mean=mean_vector,
                 cov=cov_matrix,
                 size=n_draws
             )
-            
             vp_samples = vp_vs_samples[:, 0]
             vs_samples = vp_vs_samples[:, 1]
             
@@ -234,19 +163,14 @@ def monte_carlo_draw(facies_stats, facies_names, n_draws):
             size=n_draws
         )
         
-        # Store the samples
         mc_samples[facies_name] = {
             'Vp': vp_samples,
             'Vs': vs_samples,
             'Density': density_samples
         }
         
-        # Print verification statistics
-        print(f"  Vp:      mean={np.mean(vp_samples):.4f}, std={np.std(vp_samples):.4f}")
-        print(f"  Vs:      mean={np.mean(vs_samples):.4f}, std={np.std(vs_samples):.4f}")
-        print(f"  Density: mean={np.mean(density_samples):.4f}, std={np.std(density_samples):.4f}")
-        print(f"  Correlation(Vp,Vs): {np.corrcoef(vp_samples, vs_samples)[0,1]:.4f}")
-    
+        # print(f"  Vp:      mean={np.mean(vp_samples):.4f}, std={np.std(vp_samples):.4f}")
+        
     print("\n" + "="*60)
     print(f"Monte Carlo sampling complete for {len(mc_samples)} facies.")
     print("="*60 + "\n")
@@ -254,15 +178,14 @@ def monte_carlo_draw(facies_stats, facies_names, n_draws):
     return mc_samples
 
 
-def compute_avo_reflectivity(mc_samples, facies_names, theta_angles, top_layer_props, approx=1):
+def compute_avo_reflectivity(mc_samples, facies_names, theta_angles, approx=1):
     """
-    Computes AVO reflectivity (Rpp) for all Monte Carlo samples.
+    Computes AVO reflectivity (Rpp) using Facies IV as the top layer.
     
     Args:
         mc_samples (dict): Output from monte_carlo_draw.
         facies_names (list): List of facies names.
         theta_angles (np.array): Array of angles (degrees).
-        top_layer_props (dict): Dictionary with {'Vp', 'Vs', 'Density'} for the top layer.
         approx (int): Approximation flag for avopp.
     
     Returns:
@@ -270,14 +193,13 @@ def compute_avo_reflectivity(mc_samples, facies_names, theta_angles, top_layer_p
     """
     print("  Starting AVO reflectivity computation...")
     
-    try:
-        vp1 = top_layer_props['Vp']
-        vs1 = top_layer_props['Vs']
-        d1 = top_layer_props['Density']
-    except (KeyError, TypeError) as e:
-        print(f"  ERROR: 'top_layer_props' is invalid or missing. {e}")
+    # --- FIX: Use Facies IV samples as top layer (from mc_draw.py logic) ---
+    if 'FaciesIV' not in mc_samples:
+        print("  ERROR: 'FaciesIV' not found in MC samples. Cannot run AVO.")
         return None
 
+    facies_iv = mc_samples['FaciesIV']
+    
     avo_data = {}
     
     # Loop through each facies (including FaciesIV itself)
@@ -286,25 +208,33 @@ def compute_avo_reflectivity(mc_samples, facies_names, theta_angles, top_layer_p
             print(f"  Warning: {facies_name} not in MC samples. Skipping.")
             continue
         
-        print(f"Processing: {facies_name}")
+        print(f"Processing AVO for: {facies_name}")
         
         samples = mc_samples[facies_name]
         n_sims = samples['Vp'].shape[0]
         n_angs = theta_angles.shape[0]
-        
-        # Get the arrays of sampled properties for the bottom layer
-        vp2_all = samples['Vp']
-        vs2_all = samples['Vs']
-        d2_all = samples['Density']
         
         # Initialize Rpp array
         rpp_curves = np.zeros((n_sims, n_angs))
         
         # Calculate reflectivity for each sample
         for i in range(n_sims):
-            vp2 = vp2_all[i]
-            vs2 = vs2_all[i]
-            d2 = d2_all[i]
+            # --- Top Layer: Facies IV (Realization i) ---
+            vp1 = facies_iv['Vp'][i]
+            vs1 = facies_iv['Vs'][i]
+            d1 = facies_iv['Density'][i]
+            
+            # --- Bottom Layer: Current Facies ---
+            if facies_name == 'FaciesIV':
+                # Special case: Offset index to ensure contrast (match mc_draw.py)
+                j = (i + 1) % n_sims
+                vp2 = samples['Vp'][j]
+                vs2 = samples['Vs'][j]
+                d2 = samples['Density'][j]
+            else:
+                vp2 = samples['Vp'][i]
+                vs2 = samples['Vs'][i]
+                d2 = samples['Density'][i]
             
             # Call avopp
             rpp_curves[i, :] = avopp(vp1, vs1, d1, vp2, vs2, d2, theta_angles, approx)
@@ -327,32 +257,18 @@ def run_avo_simulation(facies_stats, facies_names, well_data, n_samples,
     Args:
         facies_stats (dict): Statistics for the 9 facies.
         facies_names (list): List of facies names.
-        well_data (dict): The loaded Well2.txt data.
+        well_data (dict): The loaded Well2.txt data (NO LONGER USED for top layer).
         n_samples (int): Number of MC samples to draw.
         theta_angles (np.array): Array of angles (degrees).
-        top_layer_depth_start (float): Start depth for top layer stats.
-        top_layer_depth_end (float): End depth for top layer stats.
+        top_layer_depth_start (float): (Ignored - legacy).
+        top_layer_depth_end (float): (Ignored - legacy).
         approx (int): Approximation flag for avopp.
-        
-    Returns:
-        dict: The computed AVO data, or None on failure.
     """
     print("="*60)
-    print("  Starting Step 3: Monte Carlo & AVO Simulation")
+    print("  Starting Step 3: Monte Carlo & AVO Simulation (Corrected)")
     print(f"    MC Samples: {n_samples}")
     print(f"    Angle Range: {theta_angles.min()} to {theta_angles.max()} deg")
-    print(f"    AVO approximation: {approx} (1=Zoeppritz)")
-    
-    # --- Calculate top layer properties dynamically ---
-    top_layer_props = _calculate_top_layer_stats(
-        well_data, 
-        top_layer_depth_start, 
-        top_layer_depth_end
-    )
-    if top_layer_props is None:
-        return None # Error already printed in helper function
-    
-    print("="*60 + "\n")
+    print(f"    AVO approximation: {approx}")
     
     # Step 1: Monte Carlo sampling
     print("  Running Monte Carlo sampling...")
@@ -361,14 +277,13 @@ def run_avo_simulation(facies_stats, facies_names, well_data, n_samples,
     if not mc_samples:
         print("  Error: No MC samples generated. Exiting.")
         return None
-    print("  MC sampling complete.")
     
     # Step 2: Compute AVO reflectivity
+    # We no longer need 'top_layer_props' because we use FaciesIV samples inside
     avo_data = compute_avo_reflectivity(
         mc_samples, 
         facies_names, 
         theta_angles, 
-        top_layer_props,  # Pass the newly calculated properties
         approx
     )
     
