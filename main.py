@@ -320,7 +320,6 @@ def run_pipeline():
         output_grouped=config.GROUPED_FACIES_MAP_PATH
     )
     
-    # *** END FIX ***
     
     print("--- STEP 7: Complete ---")
 

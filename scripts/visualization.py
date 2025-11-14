@@ -104,7 +104,7 @@ def plot_well_logs(well_data: dict, facies_data_dict: dict, facies_colors: dict,
             if log_data_well is not None:
                 ax.plot(log_data_well, depth_data_well, 
                         color='black', 
-                        linewidth=1, 
+                        linewidth=0.4, 
                         label=label_well)
 
         except (KeyError, AttributeError, TypeError) as e:
@@ -137,7 +137,7 @@ def plot_well_logs(well_data: dict, facies_data_dict: dict, facies_colors: dict,
                 if log_data_facies is not None and depth_data_facies is not None:
                     ax.plot(log_data_facies, depth_data_facies, 
                             color=color, 
-                            linewidth=2,
+                            linewidth=1,
                             label=label_facies)
             
             except (AttributeError, TypeError) as e:
@@ -373,7 +373,7 @@ def plot_intercept_gradient(ig_data, seismic_features, facies_names, output_subp
             color = FACIES_COLORS.get(facies_name, 'gray')
             
             # Plot the point cloud
-            ax.scatter(intercept, gradient, c=color, alpha=0.1, s=5)
+            ax.scatter(intercept, gradient, c=color, alpha=1.0, s=5)
             
             # Plot the mean value
             mean_intercept = np.mean(intercept)

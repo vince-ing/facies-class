@@ -390,16 +390,16 @@ if __name__ == "__main__":
     
     # 1. Choose ONE parameter to animate:
     # 'MC_SAMPLE_COUNT', 'AVO_THETA_ANGLES', 'CLASSIFICATION_METHOD'
-    PARAM_TO_ANIMATE = 'AVO_THETA_ANGLES'
+    PARAM_TO_ANIMATE = 'MC_SAMPLE_COUNT'
     
     # 2. Define the range for the chosen parameter:
     # These values are used if param is 'MC_SAMPLE_COUNT' or 'AVO_THETA_ANGLES'
     ANIMATION_MIN = 0
-    ANIMATION_MAX = 90
-    ANIMATION_STEP = 4 # Use a large step, this process is slow!
+    ANIMATION_MAX = 500
+    ANIMATION_STEP = 20 # Use a large step, this process is slow!
     
     # 3. Define the duration of each frame in milliseconds
-    FRAME_DURATION_MS = 500 
+    FRAME_DURATION_MS = 700 
     
     # ======================================================================
     
